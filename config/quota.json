@@ -1,0 +1,125 @@
+{
+  "_readme": "Quota tiers, split into groups. Inside each group a member gets the FIRST tier whose role they hold (top to bottom). Someone in both groups (e.g. a Moderator who is also IA) is checked against both. Role keys = the role slots in /setup roles. weeklyHours null = no quota. The bot owner can change hours live with /quota set.",
+  "weekResetDay": "friday",
+  "tiers": [
+    {
+      "id": "senior_high_rank",
+      "group": "staff",
+      "label": "Senior High Rank",
+      "roles": [
+        "senior_high_rank"
+      ],
+      "weeklyHours": null,
+      "enforced": false
+    },
+    {
+      "id": "high_rank",
+      "group": "staff",
+      "label": "High Rank",
+      "roles": [
+        "high_rank"
+      ],
+      "weeklyHours": 1,
+      "enforced": false
+    },
+    {
+      "id": "supervisor",
+      "group": "staff",
+      "label": "Supervisor",
+      "roles": [
+        "supervisor"
+      ],
+      "weeklyHours": 1,
+      "enforced": false
+    },
+    {
+      "id": "trial_administrator",
+      "group": "staff",
+      "label": "Trial Administrator",
+      "roles": [
+        "trial_administrator"
+      ],
+      "weeklyHours": 5.5,
+      "enforced": true,
+      "trial": {
+        "minBansReviewed": 7,
+        "maxStrikes": 0,
+        "onFail": "Demoted back to Senior Moderator or Moderator"
+      }
+    },
+    {
+      "id": "trial_moderator",
+      "group": "staff",
+      "label": "Trial Moderator",
+      "roles": [
+        "trial_moderator"
+      ],
+      "weeklyHours": 3,
+      "enforced": true,
+      "trial": {
+        "minModerations": 16,
+        "maxStrikes": 0,
+        "onFail": "Terminated - must redo the application and training"
+      }
+    },
+    {
+      "id": "general",
+      "group": "staff",
+      "label": "Staff",
+      "roles": [
+        "staff"
+      ],
+      "weeklyHours": 3,
+      "enforced": true
+    },
+    {
+      "id": "internal_affairs",
+      "group": "ia",
+      "label": "Internal Affairs",
+      "roles": [
+        "internal_affairs"
+      ],
+      "weeklyHours": 2,
+      "enforced": false,
+      "notes": [
+        "1 staff investigation per week (when available)",
+        "100% case documentation",
+        "Everything must be logged or it won't count",
+        "Judge alongside actual ticket volume - don't punish IA for a lack of reports"
+      ],
+      "minLogsPerWeek": 3
+    }
+  ],
+  "groups": {
+    "staff": {
+      "label": "Staff Team"
+    },
+    "ia": {
+      "label": "Internal Affairs",
+      "manualNote": "Hours come from Vex; cases come from each IA member's logs (every \"... Logged\" entry counts as one). Investigations and documentation quality must be checked manually. Repeated inactivity without an approved reason → inactivity warning, infraction, or removal from IA."
+    }
+  },
+  "_enforcement_readme": "Applied to tiers with enforced: true, using hours logged in the week. First match wins.",
+  "enforcement": [
+    {
+      "belowHours": 0.5,
+      "action": "Demotion / Termination",
+      "emoji": "⛔"
+    },
+    {
+      "belowHours": 2.5,
+      "action": "Strike",
+      "emoji": "🟧"
+    },
+    {
+      "belowQuota": true,
+      "action": "Warning / Notice",
+      "emoji": "⚠️"
+    }
+  ],
+  "promotional": {
+    "weeklyHours": 5,
+    "topN": 10
+  },
+  "trialLookbackDays": 30
+}

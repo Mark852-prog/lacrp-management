@@ -1,0 +1,27 @@
+{
+  "_readme": "Vehicles and liveries that /server-check flags. prohibitedVehicles are flagged for everyone (Premium/VIP included); restrictedVehicles only for drivers without Premium/VIP. Vehicle names are matched loosely (case, spacing and small spelling differences are ignored, but the year must match). Livery names must match exactly (case ignored). Restricted liveries are only flagged for drivers whose in-game team is NOT in liveryIgnoredTeams (civilian cars use the Standard livery too). Members with the Premium or VIP role (set in /setup roles) are never flagged. Run /setup reload after editing. staffLiveries: any livery whose name CONTAINS one of these (case ignored, so Staff covers LACRP Staff, LACRP | Staff...) is flagged when the driver has no staff role. Premium/VIP do not unlock these.",
+  "restrictedVehicles": [
+    "Chevlon Corbeta RZR 2014",
+    "Chevlon Corbeta 8 2023",
+    "Takeo Experience 2021",
+    "Falcon Heritage 2021",
+    "Surrey 650S 2016",
+    "Strugatti Ettore 2020",
+    "Chevlon Corbeta X08 2014",
+    "Chevlon Corbeta 1M Edition 2014",
+    "Ferdinand Rapido S 2022"
+  ],
+  "prohibitedVehicles": [
+    "Pea Car",
+    "Kovac Heladera 2023"
+  ],
+  "restrictedLiveries": [
+    "Standard"
+  ],
+  "liveryIgnoredTeams": [
+    "Civilian"
+  ],
+  "staffLiveries": [
+    "Staff"
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "_readme": "STARTING LIST ONLY. On first start these are copied into the bot's database. After that, manage announcements in Discord with /announcement (add, edit, remove, list) - edits to this file are ignored once the database has been seeded. In-game: ':log announce <keyword>'. type 'h' = hint bar, 'm' = full-screen message.",
+  "announcements": {
+    "taxi":         { "label": "Taxi / Limo",      "type": "h", "message": "🚕 Private taxi service is now live across the city. Need a ride? Call for pickup!" },
+    "bus":          { "label": "Bus",              "type": "h", "message": "🚌 City buses are running on schedule. Head to the nearest stop and hop on!" },
+    "gas":          { "label": "Gas Station",      "type": "h", "message": "⛽ Fuel depot is open with competitive prices, car washes, and snacks available." },
+    "modshop":      { "label": "Mod Shop",         "type": "h", "message": "🛠 Performance garage is accepting vehicles. Repairs, tuning, and custom work ready." },
+    "dealership":   { "label": "Car Dealership",   "type": "h", "message": "🚗 Dealership lot is stocked and open. Browse new and used vehicles for sale." },
+    "tow":          { "label": "Towing Service",   "type": "h", "message": "🛻 Towing service is active. Broken down or need a recovery? Call for immediate assistance." },
+    "dmv":          { "label": "DMV",              "type": "h", "message": "🚗 The DMV is open! Get your license or handle your vehicle paperwork today." },
+
+    "coffee":       { "label": "Coffee",           "type": "h", "message": "☕ Downtown coffee house is serving fresh brews, pastries, and light meals." },
+    "foodtruck":    { "label": "Food Truck",       "type": "h", "message": "🍔 Street food truck is parked and open. Grab burgers, fries, and cold drinks." },
+    "bakery":       { "label": "Bakery",           "type": "h", "message": "🍩 Bakery is fresh out of the oven. Donuts, cookies, cakes, and more available." },
+    "sushi":        { "label": "Sushi",            "type": "h", "message": "🍣 Sushi bar is accepting customers. Fresh rolls and specialty dishes ready." },
+    "barber":       { "label": "Barbershop",       "type": "h", "message": "💈 Barber shop is open for cuts, fades, and beard work. Walk-ins welcome." },
+    "bank":         { "label": "Bank",             "type": "h", "message": "🏦 Bank is open for deposits, withdrawals, and account services." },
+    "highrock":     { "label": "High Rock",        "type": "h", "message": "🌲 City park is open to the public. Enjoy the trails, picnic areas, and lake." },
+
+    "jewelry":      { "label": "Jewelry",          "type": "h", "message": "💎 Jewelry boutique is displaying new collections. Rings, chains, and watches available." },
+    "hospital":     { "label": "Hospital",         "type": "h", "message": "🏥 The hospital is open. Stop by for treatment, check-ups, and medical care." },
+    "gunstore":     { "label": "Gun Store",        "type": "h", "message": "🔫 The gun store is open! Feel free to check out the newest stock of weapons!" },
+    "clothing":     { "label": "Clothing Shop",    "type": "h", "message": "👕 Clothing boutique just dropped new fits. Upgrade your wardrobe today." },
+    "cinema":       { "label": "Cinema",           "type": "h", "message": "🎥 Cinema is showing the latest films. Tickets and snacks available at the door." },
+    "records":      { "label": "Record Store",     "type": "h", "message": "💿 Record store is stocked with vinyl, CDs, and exclusive releases." },
+    "electronics":  { "label": "Electronics",      "type": "h", "message": "📱 Electronics shop is open. Phones, drones, and gadgets ready for purchase." },
+
+    "garbage":      { "label": "Garbage Truck",    "type": "h", "message": "🗑 Sanitation trucks are on route. Have your bins ready for pickup." },
+    "postal":       { "label": "Postal Services",  "type": "h", "message": "📧 Postal service is delivering mail. Check your boxes for packages and letters." },
+    "policedesk":   { "label": "Police Desk",      "type": "h", "message": "👮 Police desk is open for reports, complaints, and civilian inquiries." },
+    "courthouse":   { "label": "Courthouse",       "type": "h", "message": "👨‍⚖️ Courthouse is in session. Attend hearings or legal proceedings as required." },
+    "ems":          { "label": "EMS",              "type": "h", "message": "🚑 EMS units are on standby. Call emergency services if medical help is needed." },
+    "lafd":         { "label": "LAFD",             "type": "h", "message": "🚒 Fire department is staffed and ready to respond to any incidents." },
+    "construction": { "label": "Construction",     "type": "h", "message": "🏗 Construction site is active. Heavy equipment and workers on location." },
+
+    "hitman":       { "label": "Hitman",           "type": "h", "message": "🔪 Quiet contract services are currently available. Serious inquiries only." },
+    "security":     { "label": "Security",         "type": "h", "message": "🛡 Private security teams are taking protection jobs. Message for rates." },
+    "getaway":      { "label": "Driving",          "type": "h", "message": "🚓 Getaway drivers are online and ready. Fast extraction available on request." },
+    "deals":        { "label": "Secret Deals",     "type": "h", "message": "🕶 Underground deals are happening tonight. Stay sharp and keep it discreet." },
+    "needpolice":   { "label": "Police Team",      "type": "h", "message": "🚓 Police numbers are low. Consider switching to LEO to help balance the server." },
+    "needfire":     { "label": "LAFD Team",        "type": "h", "message": "🚒 Fire Department needs more active members. Join FD if you're available." },
+    "needdot":      { "label": "DOT Team",         "type": "h", "message": "🚚 DOT is short-staffed. Switch over and help keep the roads clear." },
+
+    "needciv":      { "label": "Civ Team",         "type": "h", "message": "🏎 Civilian population is low. Switch to Civ to keep roleplay flowing." },
+    "needems":      { "label": "EMS Team",         "type": "h", "message": "🚑 EMS is understaffed. More medics needed for faster response times." },
+    "safezone":     { "label": "Safe Zone",        "type": "h", "message": "⚠ Safe zones are no-crime areas. No shooting or robberies at spawn or marked safe locations." },
+    "jurisdiction": { "label": "Jurisdiction",     "type": "h", "message": "🚔 Stay within your assigned jurisdiction. Do not leave your designated area without reason." },
+    "avatars":      { "label": "Avatars",          "type": "h", "message": "👕 Only approved uniforms and outfits are allowed. Restricted clothing will result in a warning." },
+    "cuffrush":     { "label": "Cuff Rush",        "type": "h", "message": "⚠ Always use *cuffs before detaining. Skipping this step is a rule break." },
+    "crashes":      { "label": "RPing Crashes",    "type": "h", "message": "🚗 All crashes must be roleplayed unless clearly caused by lag or desync." },
+
+    "interrupt":    { "label": "RP Interruption",  "type": "h", "message": "⚠ Do not interrupt ongoing scenes you were not originally part of." },
+    "speeding":     { "label": "Excessive Speed",  "type": "h", "message": "🚨 Excessive speed (100+ mph in city / 120+ on highway) is considered GTA driving." },
+    "assistance":   { "label": "Assistance",       "type": "h", "message": "🎗 Need staff assistance or want to report something? Type !mod in chat." },
+    "community":    { "label": "Community",        "type": "h", "message": "💬 Joining the community is required to play. Code is available in-game." },
+    "callvolume":   { "label": "Call Volume",      "type": "h", "message": "❗ Call volume is high right now. Please be patient while we work through the queue." },
+    "reports":      { "label": "Reports",          "type": "h", "message": "🔗 Staff abuse reports go through tickets in the community server only." },
+    "joinstaff":    { "label": "Join Staff Team",  "type": "h", "message": "📋 Looking to join the staff team? Applications are open in the community." }
+  }
+}

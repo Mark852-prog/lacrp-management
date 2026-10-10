@@ -1,0 +1,12 @@
+{
+  "_readme": "How /panel commands groups the ':log announce' keywords. Categories show in this order; any keyword not listed here goes under 'Other'. Run /setup reload after editing (the panel refreshes on its own when announcements change).",
+  "categories": [
+    { "name": "Transport & Vehicles", "emoji": "🚗", "keywords": ["taxi", "bus", "gas", "modshop", "dealership", "tow", "dmv"] },
+    { "name": "Food, Shops & Leisure", "emoji": "🛍️", "keywords": ["coffee", "foodtruck", "bakery", "sushi", "barber", "bank", "jewelry", "gunstore", "clothing", "cinema", "records", "electronics", "highrock"] },
+    { "name": "City Services", "emoji": "🏛️", "keywords": ["garbage", "postal", "policedesk", "courthouse", "hospital", "ems", "lafd", "construction"] },
+    { "name": "Criminal Roleplay", "emoji": "🕶️", "keywords": ["hitman", "security", "getaway", "deals"] },
+    { "name": "Team Balance", "emoji": "⚖️", "keywords": ["needpolice", "needfire", "needems", "needdot", "needciv"] },
+    { "name": "Server Rules", "emoji": "📜", "keywords": ["safezone", "jurisdiction", "avatars", "cuffrush", "crashes", "interrupt", "speeding"] },
+    { "name": "Community & Support", "emoji": "💬", "keywords": ["assistance", "community", "callvolume", "reports", "joinstaff"] }
+  ]
+}

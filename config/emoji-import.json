@@ -1,0 +1,68 @@
+{
+  "_readme": "Used by /setup import-emojis. Each name is downloaded from <baseUrl>/<folder>/<name>.png and uploaded as a server emoji with that name. Names that already exist are skipped.",
+  "baseUrl": "https://raw.githubusercontent.com/Mark852-prog/lacrp-management/main/assets/emojis",
+  "sets": [
+    {
+      "folder": "orange",
+      "names": [
+        "o_rules",
+        "o_warning",
+        "o_ban",
+        "o_pin",
+        "o_staff",
+        "o_admin",
+        "o_verified",
+        "o_clipboard",
+        "o_bell",
+        "o_bookmark",
+        "o_tools",
+        "o_key",
+        "o_eye",
+        "o_calendar",
+        "o_hourglass",
+        "o_trophy",
+        "o_medal",
+        "o_award",
+        "o_heart",
+        "o_thumbsup",
+        "o_thumbsdown",
+        "o_chat",
+        "o_mail",
+        "o_youtube",
+        "o_tiktok"
+      ]
+    },
+    {
+      "folder": "white",
+      "names": [
+        "w_police",
+        "w_badge",
+        "w_idcard",
+        "w_handcuffs",
+        "w_jail",
+        "w_medic",
+        "w_ambulance",
+        "w_hospital",
+        "w_extinguisher",
+        "w_fire",
+        "w_dispatch",
+        "w_radio",
+        "w_car",
+        "w_tow",
+        "w_helicopter",
+        "w_gun",
+        "w_crosshair",
+        "w_mask",
+        "w_court",
+        "w_civilian",
+        "w_money",
+        "w_phone",
+        "w_map",
+        "w_motorcycle",
+        "w_wrench"
+      ]
+    }
+  ],
+  "_replacedAfter": "replace mode keeps emojis created after this time (they are already the fixed versions).",
+  "replacedAfter": "2026-10-03T09:32:00Z"
+}

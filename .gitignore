@@ -1,0 +1,7 @@
+node_modules/
+.env
+data/
+*.log
+
+# Downloaded emoji/sticker files (third-party, not redistributed)
+assets/media/

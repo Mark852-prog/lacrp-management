@@ -1,0 +1,19 @@
+{
+  "name": "lacrp-management",
+  "version": "1.0.0",
+  "description": "LACRP Management - sessions, staff duty, live ER:LC logging and analytics for Los Angeles City Roleplay.",
+  "main": "src/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node --check src/index.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "luxon": "^3.5.0"
+  }
+}

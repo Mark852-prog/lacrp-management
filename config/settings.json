@@ -1,0 +1,36 @@
+{
+  "serverName": "Los Angeles City Roleplay",
+  "timezone": "America/Los_Angeles",
+  "pollIntervalSeconds": 20,
+  "sessionVoteDefaultVotes": 8,
+  "sessionFillPercent": 90,
+  "noShowGraceMinutes": 30,
+  "highActivityAlert": {
+    "enabled": true,
+    "nearFullPercent": 90,
+    "rearmBelowPercent": 75,
+    "cooldownMinutes": 60
+  },
+  "moderationCommands": [
+    ":kick",
+    ":ban",
+    ":tban"
+  ],
+  "banCommands": [
+    ":ban",
+    ":tban"
+  ],
+  "kickCommands": [
+    ":kick"
+  ],
+  "vexShiftTypesCounted": [
+    "Staff"
+  ],
+  "rawSnapshotRetentionDays": 45,
+  "bloxlink": {
+    "linkedCacheHours": 168,
+    "unlinkedCacheHours": 12,
+    "dailyRequestBudget": 450
+  },
+  "webEditorUrl": "http://de-01.rrhosting.eu:7765"
+}

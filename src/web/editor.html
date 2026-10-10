@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LACRP Embed Studio</title>
+<style>
+  :root {
+    --bg: #0f1012; --panel: #17181b; --panel-2: #1e1f23; --line: #2a2c31;
+    --text: #e9e9ec; --muted: #9a9ca3; --accent: #e67e22; --accent-2: #f39a4a;
+    --discord-bg: #313338; --discord-embed: #2b2d31; --discord-text: #dbdee1; --discord-muted: #949ba4;
+    --blurple: #5865f2; --green: #248046; --red: #da373c; --grey: #4e5058;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 18px; background: rgba(15,16,18,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .spacer { flex: 1; }
+  select, input, textarea, button { font: inherit; color: inherit; }
+  select, input[type=text], textarea { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; }
+  textarea { resize: vertical; min-height: 90px; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  button:hover { border-color: var(--accent); }
+  button.cta { background: var(--accent); border-color: var(--accent); color: #1a0f05; font-weight: 600; }
+  button.cta:hover { background: var(--accent-2); }
+  button.danger:hover { border-color: var(--red); color: #ff8a8d; }
+  button.small { padding: 4px 9px; font-size: 12px; }
+  .status { color: var(--muted); font-size: 12px; min-width: 150px; text-align: right; }
+  main { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(380px, 560px); gap: 20px; padding: 20px 18px 60px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } .preview-wrap { position: static !important; } }
+  section.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+  section.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  section.card h2 .count { color: var(--accent); font-weight: 600; }
+  .row { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .row.three { grid-template-columns: 1fr 1fr 1fr; }
+  label.f { display: block; margin-bottom: 10px; }
+  label.f > span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .img-pick { display: flex; gap: 8px; }
+  .img-pick select { flex: 1; }
+  .item { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; background: var(--panel-2); }
+  .item .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-weight: 600; font-size: 13px; }
+  .item .head .tools { display: flex; gap: 6px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 4px 0 0; }
+  .empty { color: var(--muted); font-style: italic; margin: 0 0 10px; }
+  details.reply { margin-top: 6px; }
+  details.reply summary { cursor: pointer; color: var(--accent-2); font-size: 12px; margin-bottom: 8px; }
+  input[type=color] { width: 44px; height: 36px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+
+  /* ---- Discord preview ---- */
+  .preview-wrap { position: sticky; top: 76px; align-self: start; }
+  .preview-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 0 0 8px; }
+  .discord { background: var(--discord-bg); border-radius: var(--radius); padding: 16px 16px 18px; color: var(--discord-text); font-family: "gg sans", "Segoe UI", sans-serif; }
+  .msg { display: grid; grid-template-columns: 40px 1fr; gap: 14px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #b3541e); display: grid; place-items: center; font-weight: 800; font-size: 13px; color: #1a0f05; }
+  .author { font-weight: 600; color: #f2f3f5; }
+  .author .app { background: var(--blurple); color: #fff; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: 1px; }
+  .author time { color: var(--discord-muted); font-size: 12px; font-weight: 400; margin-left: 6px; }
+  .embed { background: var(--discord-embed); border-left: 4px solid var(--accent); border-radius: 4px; padding: 12px 16px 14px 12px; margin-top: 6px; max-width: 516px; }
+  .embed.only-image { padding: 12px 16px 12px 12px; }
+  .embed .e-title { font-weight: 700; color: #f2f3f5; margin-bottom: 6px; font-size: 15px; }
+  .embed .e-desc { font-size: 14px; white-space: normal; word-wrap: break-word; }
+  .embed .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; margin-top: 8px; }
+  .embed .field { grid-column: span 3; }
+  .embed .field.inline { grid-column: span 1; }
+  .embed .field .fn { font-weight: 700; font-size: 13px; color: #f2f3f5; margin-bottom: 2px; }
+  .embed .field .fv { font-size: 14px; }
+  .embed img.big { display: block; width: 100%; border-radius: 4px; margin-top: 12px; }
+  .embed.only-image img.big { margin-top: 0; }
+  .embed .e-foot { color: var(--discord-muted); font-size: 12px; margin-top: 8px; }
+  .comp-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .dbtn { border: 0; border-radius: 4px; padding: 7px 14px; color: #fff; font-weight: 500; font-size: 14px; }
+  .dbtn.secondary { background: var(--grey); } .dbtn.primary { background: var(--blurple); } .dbtn.success { background: var(--green); } .dbtn.danger { background: var(--red); }
+  .dbtn:hover { filter: brightness(1.12); border: 0; }
+  a.linkbtn { text-decoration: none; display: inline-block; }
+  .ficon { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #1a0f05; font-size: 8px; font-weight: 800; margin-right: 6px; vertical-align: -4px; }
+  .dmenu { width: 100%; max-width: 516px; background: #1e1f22; border: 1px solid #1e1f22; border-radius: 4px; padding: 9px 10px; color: var(--discord-muted); margin-top: 8px; }
+  .reply-preview { margin-top: 14px; border-top: 1px dashed #4e5058; padding-top: 12px; }
+  .reply-preview .only { color: var(--discord-muted); font-size: 12px; margin-bottom: 4px; }
+  .md-code { background: #1e1f22; border-radius: 4px; padding: 1px 4px; font-family: Consolas, monospace; font-size: 13px; }
+  .md-block { display: block; background: #1e1f22; border: 1px solid #1a1b1e; border-radius: 4px; padding: 8px; font-family: Consolas, monospace; font-size: 13px; white-space: pre-wrap; margin: 4px 0; }
+  .md-h1 { font-size: 20px; font-weight: 700; margin: 4px 0; } .md-h2 { font-size: 17px; font-weight: 700; margin: 4px 0; } .md-h3 { font-size: 15px; font-weight: 700; margin: 4px 0; }
+  .md-sub { font-size: 12px; color: var(--discord-muted); }
+  .md-quote { border-left: 4px solid #4e5058; padding-left: 10px; margin: 2px 0; }
+  .mention { background: rgba(88,101,242,.3); color: #c9cdfb; border-radius: 3px; padding: 0 2px; }
+  a.md-link { color: #00a8fc; text-decoration: none; }
+  img.cemoji { width: 20px; height: 20px; vertical-align: -5px; }
+  .md-toolbar { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
+  .md-toolbar button { padding: 3px 9px; font-size: 12px; border-radius: 6px; }
+  .md-toolbar select { width: auto; padding: 3px 6px; font-size: 12px; border-radius: 6px; }
+  .toast { position: fixed; right: 18px; bottom: 18px; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>LACRP</span> Embed Studio</h1>
+  <select id="picker" aria-label="Saved embed" style="width:auto;min-width:180px"></select>
+  <button id="btnNew">+ New</button>
+  <button id="btnRename">Rename</button>
+  <button id="btnDelete" class="danger">Delete</button>
+  <div class="spacer"></div>
+  <select id="channel" aria-label="Channel to post in" style="width:auto;min-width:200px"></select>
+  <button id="btnPost" class="cta">Post to channel</button>
+  <div class="status" id="status">Loading…</div>
+</header>
+
+<main>
+  <div id="editor">
+    <section class="card">
+      <h2>Images</h2>
+      <div class="row">
+        <label class="f"><span>Top image (banner above the embed)</span>
+          <div class="img-pick"><select id="topImage"></select><button class="small" data-upload="topImage">Upload…</button></div></label>
+        <label class="f"><span>Bottom image (inside the embed, at the bottom)</span>
+          <div class="img-pick"><select id="bottomImage"></select><button class="small" data-upload="bottomImage">Upload…</button></div></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Text</h2>
+      <label class="f"><span>Title (the bold line at the top)</span><input type="text" id="title" maxlength="256"></label>
+      <label class="f"><span>Text — supports **bold**, *italic*, __underline__, `code`, # headings, -# small text, &gt; quotes and [links](https://…)</span><textarea id="description" maxlength="4000" rows="7"></textarea></label>
+      <div class="row">
+        <label class="f"><span>Footer (small text at the very bottom)</span><input type="text" id="footer" maxlength="2048"></label>
+        <label class="f"><span>Side colour</span><div class="color-row"><input type="color" id="colorPick"><input type="text" id="color" maxlength="7"></div></label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Fields <span class="count" id="fieldCount"></span></h2>
+      <div id="fields"></div>
+      <button id="addField" class="small">+ Add field</button>
+    </section>
+
+    <section class="card">
+      <h2>Buttons <span class="count" id="buttonCount"></span></h2>
+      <p class="hint" style="margin:-6px 0 10px">Each button shows a hidden message — only the person who clicks it sees it.</p>
+      <div id="buttons"></div>
+      <button id="addButton" class="small">+ Add button</button>
+    </section>
+
+    <section class="card">
+      <h2>Dropdown menu <span class="count" id="optionCount"></span></h2>
+      <label class="f"><span>Placeholder (shown before anything is picked)</span><input type="text" id="menuPlaceholder" maxlength="150" placeholder="Select an option…"></label>
+      <div id="options"></div>
+      <button id="addOption" class="small">+ Add option</button>
+    </section>
+  </div>
+
+  <div class="preview-wrap">
+    <p class="preview-title">Live preview</p>
+    <div class="discord"><div class="msg">
+      <div class="avatar">LA</div>
+      <div>
+        <div class="author">LACRP Management<span class="app">APP</span><time>Today</time></div>
+        <div id="preview"></div>
+        <div id="replyPreview"></div>
+      </div>
+    </div></div>
+    <p class="hint">Click a button or pick a menu option in the preview to see its hidden reply.</p>
+  </div>
+</main>
+<input type="file" id="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const api = async (url, opts = {}) => {
+  const res = await fetch(url, { ...opts, headers: { 'X-LACRP': '1', ...(opts.body && !(opts.body instanceof Blob) ? { 'Content-Type': 'application/json' } : {}), ...(opts.headers || {}) } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+};
+let state = { embeds: [], images: [], channels: [] };
+let current = null; // { id, name, data, posts }
+let saveTimer = null;
+let uploadTarget = null;
+
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+function setStatus(msg) { $('status').textContent = msg; }
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// ---------- tiny Discord-markdown renderer (input is escaped first) ----------
+function md(text) {
+  const blocks = [];
+  let s = esc(text).replace(/```(?:\w*\n)?([\s\S]*?)```/g, (_, code) => { blocks.push(`<span class="md-block">${code}</span>`); return `\u0000${blocks.length - 1}\u0000`; });
+  s = s.split('\n').map((line) => {
+    if (/^### /.test(line)) return `<div class="md-h3">${line.slice(4)}</div>`;
+    if (/^## /.test(line)) return `<div class="md-h2">${line.slice(3)}</div>`;
+    if (/^# /.test(line)) return `<div class="md-h1">${line.slice(2)}</div>`;
+    if (/^-# /.test(line)) return `<div class="md-sub">${line.slice(3)}</div>`;
+    if (/^&gt; /.test(line)) return `<div class="md-quote">${line.slice(5)}</div>`;
+    return line + '<br>';
+  }).join('');
+  s = s.replace(/`([^`]+)`/g, '<span class="md-code">$1</span>')
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/__(.+?)__/g, '<u>$1</u>')
+    .replace(/\*(.+?)\*/g, '<i>$1</i>').replace(/~~(.+?)~~/g, '<s>$1</s>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a class="md-link" href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/&lt;a?:(\w+):(\d+)&gt;/g, '<img class="cemoji" alt=":$1:" src="https://cdn.discordapp.com/emojis/$2.png">')
+    .replace(/&lt;@[!&amp;]*(\d+)&gt;/g, '<span class="mention">@mention</span>')
+    .replace(/&lt;#(\d+)&gt;/g, (_, id) => `<span class="mention">#${esc(state.channels.find((c) => c.id === id)?.name ?? 'channel')}</span>`);
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => blocks[i]).replace(/(<br>)+$/, '');
+}
+const imgUrl = (key) => key ? state.images.find((i) => i.key === key)?.url : null;
+
+// ---------- preview ----------
+function renderPreview() {
+  const d = current?.data; if (!d) return;
+  const color = d.color || '#e67e22';
+  let html = '';
+  if (d.topImage && imgUrl(d.topImage)) html += `<div class="embed only-image" style="border-left-color:${esc(color)}"><img class="big" src="${imgUrl(d.topImage)}" alt=""></div>`;
+  const hasMain = d.title || d.description || d.fields.length || d.footer || d.bottomImage;
+  if (hasMain) {
+    html += `<div class="embed" style="border-left-color:${esc(color)}">`;
+    if (d.title) html += `<div class="e-title">${md(d.title)}</div>`;
+    if (d.description) html += `<div class="e-desc">${md(d.description)}</div>`;
+    if (d.fields.length) html += `<div class="fields">${d.fields.map((f) => `<div class="field${f.inline ? ' inline' : ''}"><div class="fn">${md(f.name)}</div><div class="fv">${md(f.value)}</div></div>`).join('')}</div>`;
+    if (d.bottomImage && imgUrl(d.bottomImage)) html += `<img class="big" src="${imgUrl(d.bottomImage)}" alt="">`;
+    if (d.footer) html += `<div class="e-foot">${esc(d.footer)}</div>`;
+    html += '</div>';
+  }
+  const linkBtn = (l) => `<a class="dbtn secondary linkbtn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.emoji ? l.emoji + ' ' : '')}${esc(l.label || 'Open')} ↗</a>`;
+  if (d.buttons.length) html += `<div class="comp-row">${d.buttons.map((b, i) => (b.action === 'link' ? linkBtn(b) : `<button class="dbtn ${esc(b.style)}" data-reply="b${i}">${esc(b.emoji ? b.emoji + ' ' : '')}${esc(b.label || 'Button')}</button>`)).join('')}</div>`;
+  if (d.menu && d.menu.options.length) html += menuHtml(null);
+  $('preview').innerHTML = html || '<p class="hint">Empty embed — add a title, text or image.</p>';
+}
+function menuHtml(selected) {
+  const d = current.data;
+  return `<select class="dmenu" data-menu><option value="">${esc(d.menu.placeholder || 'Select an option…')}</option>${d.menu.options.map((o, i) => `<option value="${i}"${i === selected ? ' selected' : ''}>${esc(o.emoji ? o.emoji + ' ' : '')}${esc(o.label || 'Option')}${i === selected ? '  ✓' : ''}</option>`).join('')}</select>`;
+}
+// Mirrors the bot: a menu page repeats the menu (current page ticked) and shows its link buttons.
+function showReply(reply, selected = null) {
+  if (!reply) { $('replyPreview').innerHTML = ''; return; }
+  const d = current.data;
+  const links = (reply.links || []).filter((l) => l.url);
+  $('replyPreview').innerHTML = `<div class="reply-preview"><div class="only">👁 Only you can see this</div><div class="embed" style="border-left-color:${esc(d.color)}">${reply.title ? `<div class="e-title">${md(reply.title)}</div>` : ''}${reply.text ? `<div class="e-desc">${md(reply.text)}</div>` : ''}${reply.image && imgUrl(reply.image) ? `<img class="big" src="${imgUrl(reply.image)}" alt="">` : ''}${reply.footer ? `<div class="e-foot"><span class="ficon">LA</span>${esc(reply.footer)}</div>` : ''}${!reply.title && !reply.text && !reply.image ? '<div class="e-desc"><i>(Nothing here yet.)</i></div>' : ''}</div>
+    ${selected != null && d.menu ? menuHtml(selected) : ''}
+    ${links.length ? `<div class="comp-row">${links.map((l) => `<a class="dbtn secondary linkbtn" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.emoji ? l.emoji + ' ' : '')}${esc(l.label || 'Open')} ↗</a>`).join('')}</div>` : ''}</div>`;
+}
+$('preview').addEventListener('click', (e) => { const b = e.target.closest('[data-reply]'); if (b) showReply(current.data.buttons[Number(b.dataset.reply.slice(1))]?.reply); });
+const pickPage = (e) => { if (e.target.matches('[data-menu]')) { const i = e.target.value === '' ? null : Number(e.target.value); showReply(i == null ? null : current.data.menu.options[i]?.reply, i); } };
+$('preview').addEventListener('change', pickPage);
+$('replyPreview').addEventListener('change', pickPage);
+
+// ---------- form ----------
+function imageOptions(sel, value, allowNone = true) {
+  sel.innerHTML = (allowNone ? '<option value="">— No image —</option>' : '') + state.images.map((i) => `<option value="${esc(i.key)}">${esc(i.label)}</option>`).join('');
+  sel.value = value || '';
+}
+function fillForm() {
+  const d = current.data;
+  imageOptions($('topImage'), d.topImage); imageOptions($('bottomImage'), d.bottomImage);
+  $('title').value = d.title; $('description').value = d.description; $('footer').value = d.footer;
+  $('color').value = d.color; $('colorPick').value = d.color;
+  $('menuPlaceholder').value = d.menu?.placeholder || '';
+  renderLists(); renderPreview(); showReply(null);
+}
+const channelLink = (id) => `https://discord.com/channels/${state.guildId}/${id}`;
+function channelOptions(url) {
+  const current = state.channels.find((c) => url && url.endsWith('/' + c.id));
+  return `<option value="">…or jump to a channel</option>` + state.channels.map((c) => `<option value="${c.id}"${current && current.id === c.id ? ' selected' : ''}>#${esc(c.name)}</option>`).join('');
+}
+function replyEditor(prefix, i, reply) {
+  const links = reply.links || [];
+  return `<details class="reply"${reply.text || reply.title ? '' : ' open'}><summary>Hidden reply page (only the clicker sees it)</summary>
+    <label class="f"><span>Title</span><input type="text" maxlength="256" data-${prefix}="${i}" data-key="reply.title" value="${esc(reply.title)}"></label>
+    <label class="f"><span>Text</span><textarea maxlength="4000" rows="5" data-${prefix}="${i}" data-key="reply.text">${esc(reply.text)}</textarea></label>
+    <div class="row"><label class="f"><span>Bottom image</span><div class="img-pick"><select data-${prefix}="${i}" data-key="reply.image" data-imgsel="${esc(reply.image || '')}"></select><button class="small" data-upload="${prefix}:${i}">Upload…</button></div></label>
+    <label class="f"><span>Footer (small text + server icon)</span><input type="text" maxlength="2048" data-${prefix}="${i}" data-key="reply.footer" value="${esc(reply.footer)}"></label></div>
+    <span class="hint">Link buttons under this page (${links.length}/5)</span>
+    ${links.map((l, j) => `<div class="row three" style="margin-top:6px"><input type="text" maxlength="80" placeholder="Button text" data-link="${prefix}:${i}:${j}" data-key="label" value="${esc(l.label)}">
+      <input type="text" maxlength="512" placeholder="https://…" data-link="${prefix}:${i}:${j}" data-key="url" value="${esc(l.url)}">
+      <div class="img-pick"><select data-link="${prefix}:${i}:${j}" data-key="channel">${channelOptions(l.url)}</select><button class="small danger" data-dellink="${prefix}:${i}:${j}">✕</button></div></div>`).join('')}
+    ${links.length < 5 ? `<button class="small" style="margin-top:8px" data-addlink="${prefix}:${i}">+ Add link button</button>` : ''}
+  </details>`;
+}
+function renderLists() {
+  const d = current.data;
+  $('fieldCount').textContent = `${d.fields.length}/25`;
+  $('buttonCount').textContent = `${d.buttons.length}/10`;
+  $('optionCount').textContent = `${d.menu?.options.length || 0}/25`;
+  $('fields').innerHTML = d.fields.length ? d.fields.map((f, i) => `<div class="item"><div class="head">Field ${i + 1}<div class="tools"><button class="small" data-move="fields:${i}:-1">↑</button><button class="small" data-move="fields:${i}:1">↓</button><button class="small danger" data-del="fields:${i}">Remove</button></div></div>
+    <label class="f"><span>Title</span><input type="text" maxlength="256" data-field="${i}" data-key="name" value="${esc(f.name)}"></label>
+    <label class="f"><span>Text</span><textarea maxlength="1024" rows="3" data-field="${i}" data-key="value">${esc(f.value)}</textarea></label>
+    <label><input type="checkbox" data-field="${i}" data-key="inline"${f.inline ? ' checked' : ''}> Side by side with other fields</label></div>`).join('') : '<p class="empty">No fields.</p>';
+  $('buttons').innerHTML = d.buttons.length ? d.buttons.map((b, i) => `<div class="item"><div class="head">Button ${i + 1}<div class="tools"><button class="small" data-move="buttons:${i}:-1">↑</button><button class="small" data-move="buttons:${i}:1">↓</button><button class="small danger" data-del="buttons:${i}">Remove</button></div></div>
+    <div class="row three"><label class="f"><span>Text</span><input type="text" maxlength="80" data-button="${i}" data-key="label" value="${esc(b.label)}"></label>
+    <label class="f"><span>Emoji</span><input type="text" maxlength="64" data-button="${i}" data-key="emoji" value="${esc(b.emoji)}" placeholder="📜"></label>
+    <label class="f"><span>When clicked</span><select data-button="${i}" data-key="action"><option value="reply"${b.action !== 'link' ? ' selected' : ''}>Show a hidden page</option><option value="link"${b.action === 'link' ? ' selected' : ''}>Open a link / channel</option></select></label></div>
+    ${b.action === 'link'
+      ? `<div class="row"><label class="f"><span>Link (https://…)</span><input type="text" maxlength="512" data-button="${i}" data-key="url" value="${esc(b.url)}" placeholder="https://…"></label>
+         <label class="f"><span>…or jump to a channel</span><select data-button="${i}" data-key="channel">${channelOptions(b.url)}</select></label></div>`
+      : `<label class="f"><span>Colour</span><select data-button="${i}" data-key="style">${['secondary:Grey', 'primary:Blue', 'success:Green', 'danger:Red'].map((o) => { const [v, l] = o.split(':'); return `<option value="${v}"${b.style === v ? ' selected' : ''}>${l}</option>`; }).join('')}</select></label>
+         ${replyEditor('button', i, b.reply)}`}</div>`).join('') : '<p class="empty">No buttons.</p>';
+  const opts = d.menu?.options || [];
+  $('options').innerHTML = opts.length ? opts.map((o, i) => `<div class="item"><div class="head">Option ${i + 1}<div class="tools"><button class="small" data-move="options:${i}:-1">↑</button><button class="small" data-move="options:${i}:1">↓</button><button class="small danger" data-del="options:${i}">Remove</button></div></div>
+    <div class="row three"><label class="f"><span>Name</span><input type="text" maxlength="100" data-option="${i}" data-key="label" value="${esc(o.label)}"></label>
+    <label class="f"><span>Small text</span><input type="text" maxlength="100" data-option="${i}" data-key="description" value="${esc(o.description)}"></label>
+    <label class="f"><span>Emoji</span><input type="text" maxlength="64" data-option="${i}" data-key="emoji" value="${esc(o.emoji)}"></label></div>
+    ${replyEditor('option', i, o.reply)}</div>`).join('') : '<p class="empty">No options — the menu appears once you add one.</p>';
+  document.querySelectorAll('select[data-imgsel]').forEach((sel) => imageOptions(sel, sel.dataset.imgsel));
+  addToolbars();
+}
+
+// ---------- formatting toolbar above every text box ----------
+function addToolbars() {
+  document.querySelectorAll('#editor textarea').forEach((ta) => {
+    if (ta.previousElementSibling?.classList.contains('md-toolbar')) return;
+    const bar = document.createElement('div');
+    bar.className = 'md-toolbar';
+    bar.innerHTML = `<button type="button" data-fmt="bold" title="Bold"><b>B</b></button>
+      <button type="button" data-fmt="italic" title="Italic"><i>I</i></button>
+      <button type="button" data-fmt="underline" title="Underline"><u>U</u></button>
+      <button type="button" data-fmt="link" title="Turn the selected words into a link">🔗 Link</button>
+      <select data-fmt="channel" title="Insert a clickable channel"><option value=""># Channel…</option>${state.channels.map((c) => `<option value="${c.id}">#${esc(c.name)}</option>`).join('')}</select>`;
+    ta.before(bar);
+  });
+}
+function insertAround(ta, before, after = '', placeholder = '') {
+  const { selectionStart: s, selectionEnd: e, value } = ta;
+  const picked = value.slice(s, e) || placeholder;
+  ta.value = value.slice(0, s) + before + picked + after + value.slice(e);
+  ta.focus();
+  ta.setSelectionRange(s + before.length, s + before.length + picked.length);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.md-toolbar button'); if (!b) return;
+  const ta = b.closest('.md-toolbar').nextElementSibling;
+  const fmt = b.dataset.fmt;
+  if (fmt === 'bold') insertAround(ta, '**', '**', 'bold text');
+  if (fmt === 'italic') insertAround(ta, '*', '*', 'italic text');
+  if (fmt === 'underline') insertAround(ta, '__', '__', 'underlined text');
+  if (fmt === 'link') {
+    const selected = ta.value.slice(ta.selectionStart, ta.selectionEnd).trim();
+    const words = selected || prompt('Words to show (e.g. Staff Operational Guide)');
+    if (!words) return;
+    let url = prompt(`Link for "${words}" (https://…)`, 'https://');
+    if (!url) return;
+    url = url.trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) return toast('Links must start with https:// or http://');
+    const s = ta.selectionStart, en = ta.selectionEnd;
+    ta.value = ta.value.slice(0, s) + `[${words.replace(/[[\]]/g, '')}](${url})` + ta.value.slice(en);
+    ta.focus();
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+});
+document.addEventListener('change', (e) => {
+  const sel = e.target.closest('.md-toolbar select'); if (!sel || !sel.value) return;
+  const ta = sel.closest('.md-toolbar').nextElementSibling;
+  insertAround(ta, `<#${sel.value}>`);
+  sel.value = '';
+});
+const listFor = (kind) => kind === 'fields' ? current.data.fields : kind === 'buttons' ? current.data.buttons : (current.data.menu ||= { placeholder: $('menuPlaceholder').value || 'Select an option…', options: [] }).options;
+function setPath(obj, key, value) { const parts = key.split('.'); let o = obj; while (parts.length > 1) o = o[parts.shift()] ||= {}; o[parts[0]] = value; }
+
+document.addEventListener('input', (e) => {
+  const t = e.target; if (!current || !t.closest('#editor')) return;
+  const d = current.data;
+  if (['title', 'description', 'footer'].includes(t.id)) d[t.id] = t.value;
+  else if (t.id === 'color') { if (/^#[0-9a-f]{6}$/i.test(t.value)) { d.color = t.value; $('colorPick').value = t.value; } }
+  else if (t.id === 'colorPick') { d.color = t.value; $('color').value = t.value; }
+  else if (t.id === 'menuPlaceholder') { (d.menu ||= { placeholder: '', options: [] }).placeholder = t.value; }
+  else if (t.id === 'topImage' || t.id === 'bottomImage') d[t.id] = t.value || null;
+  else if (t.dataset.field) setPath(d.fields[+t.dataset.field], t.dataset.key, t.type === 'checkbox' ? t.checked : t.value);
+  else if (t.dataset.link) {
+    const [kind, i, j] = t.dataset.link.split(':');
+    const link = (kind === 'button' ? d.buttons : d.menu.options)[+i].reply.links[+j];
+    if (t.dataset.key === 'channel') { if (t.value) { link.url = channelLink(t.value); renderLists(); } }
+    else link[t.dataset.key] = t.value;
+  }
+  else if (t.dataset.button && t.dataset.key === 'channel') { if (t.value) { d.buttons[+t.dataset.button].url = channelLink(t.value); renderLists(); } }
+  else if (t.dataset.button && t.dataset.key === 'action') { d.buttons[+t.dataset.button].action = t.value; renderLists(); }
+  else if (t.dataset.button) setPath(d.buttons[+t.dataset.button], t.dataset.key, t.value || (t.dataset.key === 'reply.image' ? null : t.value));
+  else if (t.dataset.option) setPath(d.menu.options[+t.dataset.option], t.dataset.key, t.value || (t.dataset.key === 'reply.image' ? null : t.value));
+  else return;
+  renderPreview(); queueSave();
+});
+document.addEventListener('change', (e) => { if (e.target.matches('#editor select, #editor input[type=checkbox]')) e.target.dispatchEvent(new Event('input', { bubbles: true })); });
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t || !current) return;
+  if (t.dataset.del) { const [kind, i] = t.dataset.del.split(':'); listFor(kind).splice(+i, 1); if (kind === 'options' && !current.data.menu.options.length) current.data.menu = null; renderLists(); renderPreview(); queueSave(); }
+  if (t.dataset.move) { const [kind, i, dir] = t.dataset.move.split(':'); const list = listFor(kind); const j = +i + +dir; if (j >= 0 && j < list.length) { [list[i], list[j]] = [list[j], list[i]]; renderLists(); renderPreview(); queueSave(); } }
+  if (t.dataset.upload) { uploadTarget = t.dataset.upload; $('file').click(); }
+  if (t.dataset.addlink || t.dataset.dellink) {
+    const [kind, i, j] = (t.dataset.addlink || t.dataset.dellink).split(':');
+    const reply = (kind === 'button' ? current.data.buttons : current.data.menu.options)[+i].reply;
+    reply.links ||= [];
+    if (t.dataset.addlink) reply.links.push({ label: 'Open', url: '', emoji: '' }); else reply.links.splice(+j, 1);
+    renderLists(); renderPreview(); queueSave();
+  }
+});
+$('addField').onclick = () => { if (current.data.fields.length >= 25) return toast('Max 25 fields'); current.data.fields.push({ name: 'New field', value: 'Text', inline: false }); renderLists(); renderPreview(); queueSave(); };
+$('addButton').onclick = () => { if (current.data.buttons.length >= 10) return toast('Max 10 buttons'); current.data.buttons.push({ label: 'New button', emoji: '', style: 'secondary', action: 'reply', url: '', reply: { title: '', text: '', image: null, footer: '', links: [] } }); renderLists(); renderPreview(); queueSave(); };
+$('addOption').onclick = () => { const l = listFor('options'); if (l.length >= 25) return toast('Max 25 options'); l.push({ label: 'New option', description: '', emoji: '', reply: { title: '', text: '', image: null, footer: '', links: [] } }); renderLists(); renderPreview(); queueSave(); };
+
+$('file').onchange = async () => {
+  const f = $('file').files[0]; $('file').value = ''; if (!f) return;
+  setStatus('Uploading…');
+  try {
+    const r = await api('/api/upload', { method: 'POST', body: f, headers: { 'Content-Type': f.type } });
+    state.images = r.images;
+    if (uploadTarget === 'topImage' || uploadTarget === 'bottomImage') current.data[uploadTarget] = r.key;
+    else { const [kind, i] = uploadTarget.split(':'); (kind === 'button' ? current.data.buttons : current.data.menu.options)[+i].reply.image = r.key; }
+    fillForm(); queueSave(); toast('Image uploaded');
+  } catch (err) { setStatus(''); toast(err.message); }
+};
+
+// ---------- saving / loading ----------
+function queueSave() { setStatus('Unsaved changes…'); clearTimeout(saveTimer); saveTimer = setTimeout(save, 700); }
+async function save() {
+  if (!current) return;
+  try {
+    const r = await api(`/api/embeds/${current.id}`, { method: 'PUT', body: JSON.stringify(current.data) });
+    current.posts = r.posts;
+    setStatus(r.updatedPosts ? `Saved · ${r.updatedPosts} posted cop${r.updatedPosts === 1 ? 'y' : 'ies'} updated` : 'All changes saved');
+  } catch (err) { setStatus('Save failed'); toast(err.message); }
+}
+async function load(id) {
+  clearTimeout(saveTimer);
+  current = await api(`/api/embeds/${id}`);
+  $('picker').value = String(id);
+  fillForm(); setStatus(current.posts.length ? `Posted in ${current.posts.length} place(s) — edits update them` : 'Not posted yet');
+}
+function fillPicker() { $('picker').innerHTML = state.embeds.map((e) => `<option value="${e.id}">${esc(e.name)}</option>`).join('') || '<option value="">No embeds yet</option>'; }
+async function refreshState() {
+  state = await api('/api/state');
+  fillPicker();
+  $('channel').innerHTML = '<option value="">Pick a channel…</option>' + state.channels.map((c) => `<option value="${c.id}">#${esc(c.name)}${c.category ? ` · ${esc(c.category)}` : ''}</option>`).join('');
+}
+$('picker').onchange = async () => { if (saveTimer) await save(); load($('picker').value); };
+$('btnNew').onclick = async () => {
+  const name = prompt('Name for the new embed (e.g. "rules")'); if (!name) return;
+  try { const e = await api('/api/embeds', { method: 'POST', body: JSON.stringify({ name }) }); await refreshState(); load(e.id); toast('Created'); } catch (err) { toast(err.message); }
+};
+$('btnRename').onclick = async () => {
+  if (!current) return; const name = prompt('New name', current.name); if (!name) return;
+  try { await api(`/api/embeds/${current.id}/rename`, { method: 'POST', body: JSON.stringify({ name }) }); current.name = name; await refreshState(); $('picker').value = current.id; toast('Renamed'); } catch (err) { toast(err.message); }
+};
+$('btnDelete').onclick = async () => {
+  if (!current || !confirm(`Delete "${current.name}"? Posted copies stay, but their buttons stop answering.`)) return;
+  await api(`/api/embeds/${current.id}`, { method: 'DELETE' }); await refreshState(); current = null;
+  if (state.embeds.length) load(state.embeds[0].id); else { $('preview').innerHTML = ''; setStatus('No embeds'); }
+};
+$('btnPost').onclick = async () => {
+  const channelId = $('channel').value; if (!current || !channelId) return toast('Pick a channel first');
+  if (saveTimer) await save();
+  try { current = { ...current, ...(await api(`/api/embeds/${current.id}/post`, { method: 'POST', body: JSON.stringify({ channelId }) })) }; toast('Posted!'); setStatus(`Posted in ${current.posts.length} place(s)`); } catch (err) { toast(err.message); }
+};
+
+(async () => {
+  try {
+    await refreshState();
+    if (state.embeds.length) await load(state.embeds[0].id);
+    else setStatus('Create your first embed with + New');
+  } catch (err) { setStatus(err.message); }
+})();
+</script>
+</body>
+</html>
