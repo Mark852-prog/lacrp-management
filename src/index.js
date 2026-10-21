@@ -99,6 +99,7 @@ client.once(Events.ClientReady, async (c) => {
   require('./services/roleColors').runJob(c).catch((err) => console.error('[role colors]', err)); // only when data/role-colors-job.json exists
   require('./services/roleIcons').runJob(c).catch((err) => console.error('[role icons]', err)); // only when data/role-icons-job.json exists
   require('./services/permAudit').runJob(c).catch((err) => console.error('[perm audit]', err)); // only when data/perm-job.json exists
+  require('./services/serverLayout').runJob(c).catch((err) => console.error('[layout]', err)); // only when data/layout-job.json exists
   require('./services/guidelines').refresh(c).catch(() => {}); // already-posted panels pick up design changes
   // Redraw posted polls, custom embeds and the commands panel so they use the latest emojis/layout.
   require('./commands/session-poll').refreshRecent(c).catch((err) => console.warn('[poll refresh]', err.message));

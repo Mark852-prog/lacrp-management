@@ -145,3 +145,21 @@ These are safe to edit. Run `/setup reload` afterwards.
   - `/quota set` overrides hours without editing the file.
 - `vehicles.json`: restricted vehicles and liveries used by `/server-check`. Premium and VIP members are never flagged.
 - `settings.json`: timezone, poll interval, alert thresholds, which ER:LC commands count as bans, kicks and moderations, and the Bloxlink budget.
+
+## 8. Server backup, audit, restore and channel order (`data/layout-job.json`)
+
+The bot does this itself on startup, the same way as the permission jobs. Nothing is created, renamed or deleted.
+
+1. In the RRHosting file manager, create `data/layout-job.json` with one of:
+   - `{ "action": "backup" }`: backup and report only. Changes nothing.
+   - `{ "action": "restore", "file": "server-backup-<time>.json" }`: lists what differs from that backup. Changes nothing.
+   - `{ "action": "restore", "file": "server-backup-<time>.json", "apply": true }`: puts channel order, permission overwrites and role permissions/order back. Optional `"parts": ["order", "overwrites", "roles"]` limits what is restored.
+   - `{ "action": "order", "plan": { ... } }`: re-orders channels in one bulk request. The plan has the same shape as `data/layout-current.json`.
+2. Restart the server. The job file is deleted once it has run.
+3. Download the results from `data/`:
+   - `server-backup-<time>.json`: every category and channel (name, type, position, category, permission overwrites) and every role (name, position, permissions). One is written before **every** job, so you always have the state from just before a change.
+   - `layout-report.txt`: channels in their current order, all roles, and an audit of Wick, Circle, Dyno and this bot (role position, permissions, channel overwrites, hidden channels, log channels).
+   - `layout-current.json`: the current order, as an editable plan.
+   - `layout-result.txt`: what was changed, re-read from Discord afterwards.
+
+Keep a copy of the backup JSON on your own computer too.
