@@ -1,0 +1,35 @@
+{
+  "_readme": "Timezones for the timezone panel, /availability, the availability poll and /session-times. key = short id (don't change it once members have picked it), role = role name the bot gives (created when the panel is posted, after confirmation), zone = IANA timezone (daylight saving is handled automatically). Run /setup reload after editing.",
+  "zones": [
+    { "key": "est", "label": "EST", "name": "Eastern Time", "role": "EST", "zone": "America/New_York", "region": "Americas" },
+    { "key": "cst", "label": "CST", "name": "Central Time", "role": "CST", "zone": "America/Chicago", "region": "Americas" },
+    { "key": "mst", "label": "MST", "name": "Mountain Time", "role": "MST", "zone": "America/Denver", "region": "Americas" },
+    { "key": "pst", "label": "PST", "name": "Pacific Time", "role": "PST", "zone": "America/Los_Angeles", "region": "Americas" },
+    { "key": "gmt", "label": "GMT/UK", "name": "UK & Ireland", "role": "GMT/UK", "zone": "Europe/London", "region": "Europe" },
+    { "key": "cet", "label": "CET", "name": "Central Europe", "role": "CET", "zone": "Europe/Paris", "region": "Europe" },
+    { "key": "eet", "label": "EET", "name": "Eastern Europe", "role": "EET", "zone": "Europe/Helsinki", "region": "Europe" },
+    { "key": "aest", "label": "AEST", "name": "Australia (East)", "role": "AEST", "zone": "Australia/Sydney", "region": "Asia-Pacific" },
+    { "key": "asia", "label": "Asia", "name": "Asia (UTC+8)", "role": "Asia", "zone": "Asia/Singapore", "region": "Asia-Pacific" }
+  ],
+  "regions": { "Americas": "🌎", "Europe": "🌍", "Asia-Pacific": "🌏" },
+
+  "_blocks": "Start hours of the 2-hour blocks members pick in /availability, in their own time. 24 = midnight to 2 AM (the night after that day).",
+  "blocks": [10, 12, 14, 16, 18, 20, 22, 24],
+
+  "_poll": "The availability poll's time blocks are in pollZone; each option also shows pollAlsoShow.",
+  "pollZone": "America/New_York",
+  "pollAlsoShow": "Europe/London",
+  "pollBlocks": [12, 14, 16, 18, 20, 22, 24],
+
+  "_estimate": "Members with only a timezone (no /availability or poll answer) count as 'likely' during these local hours, at estimateWeight of a confirmed member.",
+  "estimate": { "weekday": [16, 23], "weekend": [12, 24], "weight": 0.5 },
+
+  "_display": "/session-times shows every slot in these timezones.",
+  "display": [
+    { "label": "EST", "zone": "America/New_York" },
+    { "label": "PST", "zone": "America/Los_Angeles" },
+    { "label": "GMT", "zone": "Europe/London" },
+    { "label": "CET", "zone": "Europe/Paris" },
+    { "label": "AEST", "zone": "Australia/Sydney" }
+  ]
+}

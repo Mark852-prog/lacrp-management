@@ -271,6 +271,45 @@ CREATE TABLE IF NOT EXISTS custom_embeds (
   updated_at INTEGER NOT NULL
 );
 
+-- Member timezones (timezone panel / /availability). tz = key from config/timezones.json.
+CREATE TABLE IF NOT EXISTS member_timezones (
+  user_id    TEXT PRIMARY KEY,
+  tz         TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- /availability as the member picked it: local weekday (1 = Mon) + block start hour in their timezone.
+CREATE TABLE IF NOT EXISTS availability_blocks (
+  user_id TEXT NOT NULL,
+  day     INTEGER NOT NULL,
+  block   INTEGER NOT NULL,
+  PRIMARY KEY (user_id, day, block)
+) WITHOUT ROWID;
+-- The same, converted to UTC hours of the week (0 = Monday 00:00 UTC ... 167). Rebuilt on every save.
+CREATE TABLE IF NOT EXISTS availability_utc (
+  user_id TEXT NOT NULL,
+  how     INTEGER NOT NULL,
+  PRIMARY KEY (user_id, how)
+) WITHOUT ROWID;
+
+-- "When can you play?" polls. Answers = days x time blocks, for the 7 days from week_start.
+CREATE TABLE IF NOT EXISTS avail_polls (
+  message_id TEXT PRIMARY KEY,
+  channel_id TEXT,
+  created_by TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  week_start INTEGER NOT NULL,       -- unix, 00:00 of the first day in config timezones.pollZone
+  question   TEXT,
+  closed     INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS avail_poll_votes (
+  message_id TEXT NOT NULL,
+  user_id    TEXT NOT NULL,
+  days       TEXT NOT NULL DEFAULT '[]', -- JSON [0..6] day index from week_start
+  blocks     TEXT NOT NULL DEFAULT '[]', -- JSON block start hours in pollZone
+  PRIMARY KEY (message_id, user_id)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS quota_overrides (
   tier_id      TEXT PRIMARY KEY,
   weekly_hours REAL NOT NULL

@@ -10,6 +10,7 @@ const files = {
   vehicles: 'vehicles.json',
   emojis: 'emojis.json',
   commandPanel: 'command-panel.json',
+  timezones: 'timezones.json',
 };
 
 const config = {};

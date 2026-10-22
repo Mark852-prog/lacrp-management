@@ -77,6 +77,8 @@ When you assign a Vex or Utility channel, the bot imports its message history, s
 | `/game-status` | everyone |
 | `/session-status` | everyone |
 | `/session-schedule list` | everyone |
+| `/timezone view` | everyone |
+| `/availability set` / `view` / `clear` | everyone |
 | `/server-check` | staff |
 | `/staff-request` | staff |
 | `/mod-calls view` | staff |
@@ -93,6 +95,9 @@ When you assign a Vex or Utility channel, the bot imports its message history, s
 | `/session-poll` | Supervisor+ |
 | `/session-schedule create` | Supervisor+ |
 | `/session-schedule cancel` | Supervisor+ |
+| `/timezone panel` | Supervisor+ |
+| `/availability poll` | Supervisor+ |
+| `/session-times` (and its Schedule buttons) | Supervisor+ |
 | `/activity-check` | High Rank / Senior High Rank |
 | `/quota check` | High Rank / Senior High Rank |
 | `/quota tiers` | High Rank / Senior High Rank |
@@ -163,3 +168,21 @@ The bot does this itself on startup, the same way as the permission jobs. Nothin
    - `layout-result.txt`: what was changed, re-read from Discord afterwards.
 
 Keep a copy of the backup JSON on your own computer too.
+
+## 9. Session times: timezones, availability and `/session-times`
+
+The timezone list, time blocks and display timezones are in `config/timezones.json`. After editing it, restart the bot so the command options update too.
+
+**Setting it up (once)**
+1. Run `/timezone panel channel:#<channel>` in the channel where members should pick their timezone. If the timezone roles don't exist yet, the bot lists them and only creates them after you press **Create roles & post panel**. They have no permissions, can't be pinged, and are placed at the bottom of the role list.
+2. Our bot's role must stay above the timezone roles; new roles are created below it automatically.
+3. Optional: `/setup pings post:Availability poll` picks who the poll pings (default: Session Pings).
+
+**Staff guide (each week)**
+- **Members** tap their timezone on the panel once. They then press **Set my availability** (or use `/availability set`), choose days and time blocks in their own time, and press **Save**. `/availability view` shows what they saved, and `/availability clear` deletes it. `/timezone view @member` shows anyone's timezone and current local time.
+- **Early in the week (Supervisor+):** post `/availability poll`. Members pick the days and times they can play this week. Each time is shown in EST, GMT and the member's own time. Press **Results** on the poll for a day-by-time grid and the list of who answered. Answers count automatically, so nothing needs copying.
+- **Planning (Supervisor+):** run `/session-times`. It shows the 3–5 best slots for the next 7 days, how many members are likely free for each, and every slot in EST, PST, GMT, CET and AEST plus your own time. It also includes a heatmap by day and hour. Press **Schedule #1** (etc.) to announce that slot as a normal scheduled session, with you as host. You can also use `/session-schedule create` as usual.
+- **How the counts work:**
+  - **Confirmed:** members who saved `/availability` (this repeats every week) or answered a poll for that week.
+  - **Likely:** members who only picked a timezone. They are assumed free on weekday evenings and weekend afternoons/evenings in their own time, and count half as much.
+  - A slot only counts a member who is free for the whole session length (default 2h, change it with `length`).

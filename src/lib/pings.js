@@ -8,6 +8,7 @@ const EVENTS = {
   session_vote: { label: 'Session vote', default: ['session_pings'] },
   session_poll: { label: 'Session poll', default: ['session_pings'] },
   session_schedule: { label: 'Session scheduled', default: ['session_pings'] },
+  availability_poll: { label: 'Availability poll', default: ['session_pings'] },
   low_activity: { label: 'Low activity alert', default: ['session_pings'] },
   high_activity: { label: 'Server full / almost full alert', default: ['session_pings'] },
 };

@@ -67,8 +67,11 @@ async function execute(interaction) {
   if (!when || when < now()) {
     return interaction.reply({ content: `⚠️ Couldn't understand that time (or it's in the past). Try \`19:30\`, \`7:30pm\`, \`2h\` or \`2026-10-01 19:30\` — times are in ${zone()}.`, flags: MessageFlags.Ephemeral });
   }
-  const host = interaction.options.getUser('host') ?? interaction.user;
-  const note = interaction.options.getString('note');
+  return createScheduled(interaction, when, interaction.options.getUser('host') ?? interaction.user, interaction.options.getString('note'));
+}
+
+// Saves + announces a scheduled session (also used by the Schedule buttons of /session-times).
+async function createScheduled(interaction, when, host, note) {
   const { lastInsertRowid } = run('INSERT INTO scheduled_sessions(host_id, scheduled_for, created_at, note) VALUES(?, ?, ?, ?)', host.id, when, now(), note);
   const s = get('SELECT * FROM scheduled_sessions WHERE id = ?', Number(lastInsertRowid));
 
@@ -81,4 +84,4 @@ async function execute(interaction) {
   return interaction.reply({ content: `📅 Scheduled session #${s.id} for ${ts(when, 'F')} announced in ${msg.channel}. The host gets a DM when it's due; if it isn't started within the grace period it counts as a no-show.`, flags: MessageFlags.Ephemeral });
 }
 
-module.exports = { data, execute };
+module.exports = { data, execute, createScheduled };
