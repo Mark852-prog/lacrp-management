@@ -5,6 +5,9 @@
 //                           - backup, then re-order categories/channels in ONE bulk call, then verify
 //   { "action": "restore", "file": "server-backup-<time>.json", "apply": false, "parts": ["order", "overwrites", "roles"] }
 //                           - compare the server with a backup; with "apply": true put it back
+//   { "action": "ops", "ops": {...} }
+//                           - role permissions, role order and channel overwrites (see applyOps)
+// The owner can run the same things from Discord with /server-layout (no file manager needed).
 // Every action first writes data/server-backup-<time>.json: every category and channel (name, type,
 // position, parent, all permission overwrites) and every role (name, position, permissions).
 // Other output (in data/): layout-report.txt (channels in order, roles, bot audit), layout-current.json
@@ -151,7 +154,7 @@ function currentPlan(guild) {
 // plan.categoryOrder: [id | {id}] - optional, the categories top to bottom (unlisted ones keep their place at the end)
 // plan.categories:    [{ id, channels: [id | {id}] }] - wanted order inside a category (id null = no category).
 // Channels are never moved to another category. Unlisted channels stay, after the listed ones.
-async function applyOrder(guild, plan) {
+async function applyOrder(guild, plan, { dryRun = false } = {}) {
   const lines = [];
   const idOf = (x) => (typeof x === 'string' ? x : x?.id ?? null);
   const groups = displayOrder(guild);
@@ -196,6 +199,18 @@ async function applyOrder(guild, plan) {
     lines.push('Nothing to change - the order already matches the plan.');
     return lines;
   }
+  if (dryRun) {
+    lines.push(`${updates.length} position updates, sent in one bulk request:`);
+    const before = new Map(groups.filter((g) => g.category).map((g) => [g.category.id, g.channels.map((c) => c.name).join(' | ')]));
+    if (cats.map((c) => c.id).join() !== groups.filter((g) => g.category).map((g) => g.category.id).join()) {
+      lines.push(`Categories BEFORE: ${groups.filter((g) => g.category).map((g) => g.category.name).join(' | ')}`, `Categories AFTER:  ${cats.map((c) => c.name).join(' | ')}`);
+    }
+    for (const cat of cats) {
+      const after = (want.get(cat.id) ?? []).map((c) => c.name).join(' | ');
+      if (after !== before.get(cat.id)) lines.push(`${cat.name}`, `  BEFORE: ${before.get(cat.id)}`, `  AFTER:  ${after}`);
+    }
+    return lines;
+  }
   await guild.channels.setPositions(updates);
   lines.push(`Sent ${updates.length} position updates in one bulk request.`);
 
@@ -218,10 +233,11 @@ async function applyOrder(guild, plan) {
 // Compares the server with a backup. With apply=true: channel order/parents in one bulk call, each
 // changed channel's overwrites replaced as a whole, role permissions and role order (only roles below
 // our bot's top role - Discord doesn't allow more). Missing channels/roles are reported, never recreated.
+// `file` is a backup file name in data/, or the parsed backup itself.
 async function restore(guild, file, { apply = false, parts = ['order', 'overwrites', 'roles'] } = {}) {
-  const saved = JSON.parse(fs.readFileSync(path.join(DATA, path.basename(file)), 'utf8'));
-  if (saved.guild?.id !== guild.id) throw new Error(`${file} is a backup of another server`);
-  const lines = [`Restore from ${file} (taken ${saved.takenAt}) - ${apply ? 'APPLYING' : 'DRY RUN, nothing changed'}`];
+  const saved = typeof file === 'string' ? JSON.parse(fs.readFileSync(path.join(DATA, path.basename(file)), 'utf8')) : file;
+  if (saved.guild?.id !== guild.id) throw new Error('that backup is of another server');
+  const lines = [`Restore from the backup taken ${saved.takenAt} - ${apply ? 'APPLYING' : 'DRY RUN, nothing changed'}`];
   const top = guild.members.me.roles.highest.position;
   const sortKey = (list) => JSON.stringify([...list].map((o) => [o.id, String(o.type), String(o.allow), String(o.deny)]).sort());
 
@@ -274,6 +290,87 @@ async function restore(guild, file, { apply = false, parts = ['order', 'overwrit
   return lines;
 }
 
+// ---------------------------------------------------------------- role / overwrite changes
+// ops.roles:      [{ role, add: [Perm], remove: [Perm] }]            - server-level permissions (bot roles too)
+// ops.positions:  [{ role, below: role } | { role, above: role }]     - move a role right below/above another
+// ops.overwrites: [{ channel, target, set: { Perm: true|false|null } }] - true = allow, false = deny, null = neutral
+// role/target = role ID, exact role name, '@everyone' or (overwrites only) a member ID; channel = ID or exact name.
+// Roles at or above our bot's top role can't be changed by any bot - those are reported, never attempted.
+async function applyOps(guild, ops, { dryRun = false } = {}) {
+  const lines = [];
+  const top = guild.members.me.roles.highest.position;
+  const findRole = (x) => {
+    if (x === '@everyone') return guild.roles.everyone;
+    const byId = guild.roles.cache.get(x);
+    if (byId) return byId;
+    const m = guild.roles.cache.filter((r) => r.name === x);
+    return m.size === 1 ? m.first() : null;
+  };
+  const findChannel = (x) => guild.channels.cache.get(x) ?? (() => {
+    const m = guild.channels.cache.filter((c) => !c.isThread() && c.name === x);
+    return m.size === 1 ? m.first() : null;
+  })();
+  const bit = (k) => { if (!(k in P)) throw new Error(`unknown permission ${k}`); return P[k]; };
+  const mark = (ok) => (dryRun ? 'WILL' : ok ? 'OK ' : 'FAILED');
+
+  for (const op of ops.roles ?? []) {
+    const role = findRole(op.role);
+    if (!role) { lines.push(`SKIPPED role "${op.role}": not found (or several share the name)`); continue; }
+    if (role.position >= top && role.id !== guild.id) { lines.push(`SKIPPED role ${role.name}: at or above our bot's role - change it by hand`); continue; }
+    let after = role.permissions.bitfield;
+    for (const k of op.add ?? []) after |= bit(k);
+    for (const k of op.remove ?? []) after &= ~bit(k);
+    const desc = [op.add?.length ? `add ${op.add.join(', ')}` : '', op.remove?.length ? `remove ${op.remove.join(', ')}` : ''].filter(Boolean).join('; ');
+    if (after === role.permissions.bitfield) { lines.push(`OK  role ${role.name}: already correct (${desc})`); continue; }
+    if (!dryRun) {
+      await role.setPermissions(after, 'Bot permission setup (approved by server owner)');
+      await sleep(500);
+    }
+    const now = dryRun ? after : (await guild.roles.fetch(role.id, { force: true })).permissions.bitfield;
+    lines.push(`${mark(now === after)} role ${role.name}: ${desc}`);
+  }
+
+  for (const op of ops.positions ?? []) {
+    const role = findRole(op.role);
+    const ref = findRole(op.below ?? op.above);
+    if (!role || !ref) { lines.push(`SKIPPED moving "${op.role}": ${role ? `"${op.below ?? op.above}"` : 'role'} not found`); continue; }
+    // Discord positions count from the bottom: right below ref = ref's position (ref moves up one).
+    let target = op.below ? ref.position : ref.position + 1;
+    if (role.position < target) target -= 1;
+    if (role.position >= top || target >= top) { lines.push(`SKIPPED moving ${role.name}: it or its new place is at/above our bot's role - drag it by hand`); continue; }
+    if (role.position === target) { lines.push(`OK  ${role.name} is already ${op.below ? 'below' : 'above'} ${ref.name}`); continue; }
+    if (!dryRun) {
+      await guild.roles.setPositions([{ role: role.id, position: target }]);
+      await sleep(800);
+      await guild.roles.fetch(undefined, { force: true });
+    }
+    const r = guild.roles.cache.get(role.id); const f = guild.roles.cache.get(ref.id);
+    const ok = op.below ? r.position === f.position - 1 : r.position === f.position + 1;
+    lines.push(`${mark(ok)} move ${role.name} directly ${op.below ? 'below' : 'above'} ${ref.name}`);
+  }
+
+  for (const op of ops.overwrites ?? []) {
+    const c = findChannel(op.channel);
+    if (!c?.permissionOverwrites) { lines.push(`SKIPPED channel "${op.channel}": not found (or several share the name)`); continue; }
+    const target = findRole(op.target) ?? guild.members.cache.get(op.target);
+    if (!target) { lines.push(`SKIPPED #${c.name}: "${op.target}" not found`); continue; }
+    const name = target.id === guild.id ? '@everyone' : target.name ?? target.user?.tag;
+    const desc = Object.entries(op.set).map(([k, v]) => { bit(k); return `${k} ${v === true ? 'allow' : v === false ? 'deny' : 'neutral'}`; }).join(', ');
+    let ok = true;
+    if (!dryRun) {
+      await c.permissionOverwrites.edit(target.id, op.set, { reason: 'Bot permission setup (approved by server owner)' });
+      await sleep(500);
+      const o = (await guild.channels.fetch(c.id, { force: true })).permissionOverwrites.cache.get(target.id);
+      ok = Object.entries(op.set).every(([k, v]) => {
+        const a = o ? (o.allow.bitfield & P[k]) === P[k] : false; const d = o ? (o.deny.bitfield & P[k]) === P[k] : false;
+        return v === true ? a : v === false ? d : !a && !d;
+      });
+    }
+    lines.push(`${mark(ok)} #${c.name} for ${name}: ${desc}`);
+  }
+  return lines;
+}
+
 // ---------------------------------------------------------------- job runner (startup)
 async function runJob(client) {
   if (!fs.existsSync(JOB)) return;
@@ -290,6 +387,7 @@ async function runJob(client) {
   try {
     if (job.action === 'order') lines.push('', '=== RE-ORDER (re-read from Discord afterwards) ===', ...(await applyOrder(guild, job.plan ?? {})));
     if (job.action === 'restore') lines.push('', ...(await restore(guild, job.file, job)));
+    if (job.action === 'ops') lines.push('', '=== CHANGES (each re-read from Discord) ===', ...(await applyOps(guild, job.ops ?? {})));
   } catch (err) {
     lines.push('', `ERROR: ${err.message}`);
   }
@@ -300,4 +398,4 @@ async function runJob(client) {
   console.log('[layout] done - see data/layout-report.txt and data/layout-result.txt');
 }
 
-module.exports = { runJob, backup, report, applyOrder, restore, displayOrder };
+module.exports = { runJob, backup, report, currentPlan, applyOrder, applyOps, restore, displayOrder };

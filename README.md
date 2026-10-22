@@ -103,6 +103,7 @@ When you assign a Vex or Utility channel, the bot imports its message history, s
 | `/quota tiers` | High Rank / Senior High Rank |
 | `/server-analysis` | High Rank / Senior High Rank |
 | `/setup` | bot owner |
+| `/server-layout` | bot owner |
 | `/announcement add` | bot owner |
 | `/announcement edit` | bot owner |
 | `/announcement remove` | bot owner |
@@ -168,6 +169,16 @@ The bot does this itself on startup, the same way as the permission jobs. Nothin
    - `layout-result.txt`: what was changed, re-read from Discord afterwards.
 
 Keep a copy of the backup JSON on your own computer too.
+
+**From Discord instead (bot owner only, no file manager needed):**
+- `/server-layout backup` sends the backup, the audit and the current channel order back to you as files.
+- `/server-layout apply plan:<file.json>` shows a preview of every change. Nothing happens until you press **Confirm**, and a fresh backup is taken first. A plan can have `"order"` (same shape as `layout-current.json`) and/or `"ops"`:
+  - `"roles": [{ "role": "Dyno", "remove": ["BanMembers"] }]`
+  - `"positions": [{ "role": "Circle", "above": "Staff Team" }]`
+  - `"overwrites": [{ "channel": "<id>", "target": "Dyno", "set": { "ViewChannel": true, "ManageWebhooks": true } }]`
+- `/server-layout restore backup:<file.json>` previews putting the server back, and applies it on **Confirm**.
+
+No bot can change a role at or above its own top role, so Wick's role (at the very top) has to be moved by hand. If Wick anti-nuke is on, whitelist LACRP Management in Wick before applying bulk changes.
 
 ## 9. Session times: timezones, availability and `/session-times`
 
