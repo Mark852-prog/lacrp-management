@@ -22,10 +22,18 @@ function atLeast(member, slot) {
   return member.roles.cache.some((r) => r.id === id || r.comparePositionTo(target) >= 0);
 }
 
+// "<role name> and above" for ranks that have no /setup slot (matched by exact name, case ignored).
+function atLeastNamed(member, name) {
+  const target = member.guild?.roles?.cache.find((r) => r.name.trim().toLowerCase() === name.toLowerCase());
+  return Boolean(target) && member.roles.cache.some((r) => r.id === target.id || r.comparePositionTo(target) >= 0);
+}
+
 const LEVELS = {
   staff: (m) => isAdmin(m) || hasSlot(m, 'staff') || atLeast(m, 'supervisor'),
   supervisor: (m) => atLeast(m, 'supervisor') || hasSlot(m, 'high_rank') || hasSlot(m, 'senior_high_rank'),
   highRank: (m) => isAdmin(m) || hasSlot(m, 'high_rank') || hasSlot(m, 'senior_high_rank') || atLeast(m, 'high_rank'),
+  // Administrator rank and everything above it.
+  admin: (m) => isAdmin(m) || atLeastNamed(m, 'Administrator'),
   owner: isOwner,
 };
 
@@ -33,6 +41,7 @@ const LABELS = {
   staff: 'staff members',
   supervisor: 'Supervisors and above',
   highRank: 'High Rank / Senior High Rank',
+  admin: 'Administrators and above',
   owner: 'the bot owner',
 };
 

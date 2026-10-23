@@ -9,7 +9,7 @@ const data = new SlashCommandBuilder()
   .setDescription('Post a "low player activity" nudge to get more people in-game.');
 
 async function execute(interaction) {
-  if (!(await guard(interaction, 'staff'))) return;
+  if (!(await guard(interaction, 'supervisor'))) return;
   const server = await erlc.getServerCached(['Players']).catch(() => null);
   const msg = await postToSessions(interaction, lowActivityMessage(interaction.guild, server));
   if (!msg) return;

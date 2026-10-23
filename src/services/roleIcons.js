@@ -11,7 +11,10 @@ const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
 
 async function runJob(client) {
   if (!fs.existsSync(JOB)) return;
+  // Optional { "only": [role names] } limits the run to those roles (no removals).
+  const job = JSON.parse(fs.readFileSync(JOB, 'utf8') || '{}');
   fs.rmSync(JOB, { force: true }); // run once
+  const only = Array.isArray(job.only) ? new Set(job.only.map(norm)) : null;
   const guild = await client.guilds.fetch(process.env.GUILD_ID);
   await guild.roles.fetch();
   const lines = [];
@@ -21,7 +24,7 @@ async function runJob(client) {
     const { icons, remove = [] } = JSON.parse(fs.readFileSync(path.join(ROOT, 'config', 'role-icons.json'), 'utf8'));
     const top = guild.members.me.roles.highest.position;
     // Roles listed under "remove" get their icon cleared.
-    for (const name of remove) {
+    for (const name of only ? [] : remove) {
       const matches = guild.roles.cache.filter((r) => norm(r.name) === norm(name));
       if (matches.size !== 1) { lines.push(`SKIPPED removing ${name}: ${matches.size ? 'several roles share this name' : 'role not found'}`); continue; }
       const role = matches.first();
@@ -35,7 +38,7 @@ async function runJob(client) {
         lines.push(`FAILED removing ${name}: ${err.message.split('\n')[0]}`);
       }
     }
-    for (const [name, file] of Object.entries(icons)) {
+    for (const [name, file] of Object.entries(icons).filter(([n]) => !only || only.has(norm(n)))) {
       const matches = guild.roles.cache.filter((r) => norm(r.name) === norm(name));
       if (matches.size !== 1) { lines.push(`SKIPPED ${name}: ${matches.size ? 'several roles share this name' : 'role not found'}`); continue; }
       const role = matches.first();

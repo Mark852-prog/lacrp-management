@@ -1,6 +1,6 @@
 {
   "_readme": "Used by /setup import-emojis. Each name is downloaded from <baseUrl>/<folder>/<name>.png and uploaded as a server emoji with that name. Names that already exist are skipped.",
-  "baseUrl": "https://raw.githubusercontent.com/Mark852-prog/lacrp-management/main/assets/emojis",
+  "baseUrl": "https://raw.githubusercontent.com/mark852-prog/business-project-websites/claude/trusting-shannon-l8haku/discord-emojis/essentials-50",
   "sets": [
     {
       "folder": "orange",

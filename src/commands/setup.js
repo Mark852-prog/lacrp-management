@@ -18,7 +18,9 @@ const CHANNEL_TYPES = {
   ban_requests: [...TEXT_CHANNELS, ChannelType.GuildForum],
 };
 
+// Server tool: hidden from everyone without Administrator; the code still only lets the bot owner run it.
 const data = new SlashCommandBuilder()
+  .setDefaultMemberPermissions(0)
   .setName('setup')
   .setDescription('Configure LACRP Management (bot owner only). Re-run any time.')
   .addSubcommand((sub) => {
@@ -38,10 +40,8 @@ const data = new SlashCommandBuilder()
   .addSubcommand((sub) => sub
     .setName('clear')
     .setDescription('Un-assign one role or channel slot.')
-    .addStringOption((o) => o.setName('slot').setDescription('Slot to clear').setRequired(true).addChoices(
-      ...Object.keys(ROLE_SLOTS).map((k) => ({ name: `role: ${k}`, value: `role:${k}` })),
-      ...Object.keys(CHANNEL_SLOTS).map((k) => ({ name: `channel: ${k}`, value: `channel:${k}` })),
-    )))
+    // Autocomplete instead of fixed choices: there are more slots than Discord's 25-choice limit.
+    .addStringOption((o) => o.setName('slot').setDescription('Slot to clear').setRequired(true).setAutocomplete(true)))
   .addSubcommand((sub) => sub.setName('view').setDescription('Show the current configuration and any missing channel permissions.'))
   .addSubcommand((sub) => sub.setName('reload').setDescription('Reload the files in /config (quota, vehicles, emojis, settings).'))
   .addSubcommand((sub) => sub.setName('rescan').setDescription('Re-read history from the Vex and Utility Bot log channels.'))
@@ -100,7 +100,7 @@ function vehicleReport(server) {
   return `**Spawned vehicles (${lines.length})**, named exactly as ER:LC reports them:\n` +
     `${lines.join('\n').slice(0, 1700) || 'None spawned.'}\n\n` +
     `Restricted liveries (exact name): ${liveries}, not checked for: ${liveryIgnoredTeams.join(', ') || 'no teams'} (config/vehicles.json). ` +
-    'Premium/VIP drivers are skipped in /server-check.';
+    'Only Server Boosters may drive the restricted vehicles; restricted liveries are for nobody.';
 }
 
 async function execute(interaction) {
@@ -136,6 +136,7 @@ async function execute(interaction) {
 
   if (sub === 'clear') {
     const slot = interaction.options.getString('slot');
+    if (!ALL_SLOTS.includes(slot)) return interaction.reply({ content: '⚠️ Pick a slot from the list.', flags: MessageFlags.Ephemeral });
     clearSlot(slot);
     return interaction.reply({ content: `🗑️ Cleared \`${slot}\`.`, flags: MessageFlags.Ephemeral });
   }
@@ -239,4 +240,12 @@ async function execute(interaction) {
   }
 }
 
-module.exports = { data, execute };
+const ALL_SLOTS = [...Object.keys(ROLE_SLOTS).map((k) => `role:${k}`), ...Object.keys(CHANNEL_SLOTS).map((k) => `channel:${k}`)];
+
+async function autocomplete(interaction) {
+  const typed = interaction.options.getFocused().toLowerCase();
+  const matches = ALL_SLOTS.filter((s) => s.includes(typed)).slice(0, 25);
+  return interaction.respond(matches.map((s) => ({ name: s.replace(':', ': '), value: s })));
+}
+
+module.exports = { data, execute, autocomplete };

@@ -8,6 +8,7 @@ const { fetchChannel } = require('../lib/guildConfig');
 const { plain, ts } = require('../lib/embeds');
 const { activeSession } = require('../lib/sessions');
 const { highActivityMessage } = require('../lib/alerts');
+const { sendAndReplace } = require('../lib/sessionPost');
 const { dayKey } = require('../lib/time');
 const { robloxToDiscord, UNKNOWN } = require('../lib/bloxlink');
 const announcements = require('../lib/announcements');
@@ -31,6 +32,7 @@ function start(discordClient) {
       if (lastServerPayload) {
         panels.onServerData(lastServerPayload);
         inGameRole.update(lastServerPayload).catch((e) => console.warn('[in-game role]', e.message));
+        require('./discordReminder').check(client, lastServerPayload).catch((e) => console.warn('[discord reminder]', e.message));
       }
       if (lastError) console.log('[poller] recovered');
       lastError = null;
@@ -129,7 +131,8 @@ async function handleCommands(commands, players) {
   const fresh = [];
   for (const c of commands) {
     const p = erlc.parsePlayer(c.Player);
-    const res = run('INSERT OR IGNORE INTO command_logs(ts, player, player_id, command) VALUES(?, ?, ?, ?)', c.Timestamp, p.name, p.id, c.Command);
+    // Remote commands (Vex, this bot) have no player id - use 0, since NULL never counts as a duplicate.
+    const res = run('INSERT OR IGNORE INTO command_logs(ts, player, player_id, command) VALUES(?, ?, ?, ?)', c.Timestamp, p.name, p.id ?? 0, c.Command);
     if (res.changes && c.Timestamp > cursor) fresh.push({ ts: c.Timestamp, staff: p, command: String(c.Command).trim() });
   }
   if (!fresh.length) return;
@@ -236,7 +239,7 @@ async function handleHighActivity(server) {
 
   const channel = await fetchChannel(client, 'sessions');
   if (!channel) return;
-  await channel.send(highActivityMessage(channel.guild, server)).catch((e) => console.warn('[high activity]', e.message));
+  await sendAndReplace(channel, highActivityMessage(channel.guild, server)).catch((e) => console.warn('[high activity]', e.message));
   kvSet('high_activity', { armed: false, lastAt: now(), lastFull: full });
 }
 

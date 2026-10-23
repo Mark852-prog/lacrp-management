@@ -30,27 +30,27 @@ const HUB = {
 const DEPARTMENTS = {
   lapd: {
     name: 'Los Angeles Police Department', short: 'LAPD', kind: 'Law Enforcement Agency', emoji: 'dept_lapd',
-    logo: 'lapd-logo.png', media: 'lapd-media.webp', invite: 'https://discord.gg/X44ahfH2e',
+    logo: 'lapd-logo.png', media: 'lapd-media.webp', invite: 'https://discord.gg/k5qdZmJ6yq',
     about: 'The *Los Angeles Police Department* (LAPD) is responsible for enforcing laws, preventing crime, investigating criminal activity, ensuring public safety and establishing community relations throughout Los Angeles.',
   },
   lafd: {
     name: 'Los Angeles Fire Department', short: 'LAFD', kind: 'Fire & Rescue Agency', emoji: 'dept_lafd',
-    logo: 'lafd-logo.png', media: 'lafd-media.webp', invite: 'https://discord.gg/zJmnUztc7',
+    logo: 'lafd-logo.png', media: 'lafd-media.webp', invite: 'https://discord.gg/bthGf4x2YE',
     about: 'The *Los Angeles Fire Department* (LAFD) is the first call when things go wrong. Firefighters and paramedics respond to fires, medical emergencies, crashes and rescues across the city, treating patients on scene and getting them to the hospital when every second counts.',
   },
   lasd: {
     name: 'Los Angeles Sheriff\'s Department', short: 'LASD', kind: 'Law Enforcement Agency', emoji: 'dept_lasd',
-    logo: 'lasd-logo.png', media: 'lasd-media.webp', invite: 'https://discord.gg/CcaEPmxst',
+    logo: 'lasd-logo.png', media: 'lasd-media.webp', invite: 'https://discord.gg/srsJXsRaZC',
     about: 'The *Los Angeles Sheriff\'s Department* (LASD) keeps the peace across Los Angeles County. Deputies patrol the county roads and communities outside the city, respond to calls and back up other agencies, all built on three words: **Service. Trust. Accountability.**',
   },
   gov: {
     name: 'Los Angeles Government', short: 'GOV', kind: 'City Government', emoji: 'dept_gov',
-    logo: 'gov-logo.png', media: 'gov-media.webp', invite: 'https://discord.gg/HW6xxGQNC',
+    logo: 'gov-logo.png', media: 'gov-media.webp', invite: 'https://discord.gg/rEKhAHZ8na',
     about: 'The *Los Angeles Government* is the backbone of the city. From the courthouse to city hall, it handles laws, court cases and public services, and keeps every department working together so Los Angeles runs smoothly.',
   },
   dot: {
     name: 'Los Angeles Department of Transportation', short: 'LADOT', kind: 'Transportation Agency', emoji: 'dept_dot',
-    logo: 'dot-logo.png', media: 'dot-media.webp', invite: 'https://discord.gg/Jx86cMUcF',
+    logo: 'dot-logo.png', media: 'dot-media.webp', invite: 'https://discord.gg/EfVntwtzXb',
     about: 'The *Los Angeles Department of Transportation* (LADOT) keeps Los Angeles moving. Crews handle roadwork, traffic control and towing, set up closures and clear the road after crashes so everyone gets where they need to go safely.',
   },
 };

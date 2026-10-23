@@ -27,6 +27,10 @@ const CHANNEL_SLOTS = {
   resignations: 'Utility Bot resignations (read-only)',
   ia_logs: "IA logs - channel, forum or category holding each IA member's logs (read-only)",
   ban_requests: 'Ban requests channel - panels + review threads (read-only)',
+  ingame_logs: 'In-game command log (/bans unban is logged here)',
+  advocates: 'Advocates (thank-you message for new server boosts)',
+  counting: 'Counting channel (1, 2, 3... in order)',
+  audit_logs: 'HR audit logs (manual /verify links and removals)',
 };
 
 function getSlot(slot) {
@@ -45,8 +49,15 @@ function allSlots() {
 const role = (slot) => getSlot(`role:${slot}`);
 const channel = (slot) => getSlot(`channel:${slot}`);
 
+// Channels found by name when their slot hasn't been set with /setup channels.
+const DEFAULT_NAMES = { advocates: /advocates/, audit_logs: /audit-logs/, counting: /counting/ };
+
 async function fetchChannel(client, slot) {
-  const id = channel(slot);
+  let id = channel(slot);
+  if (!id && DEFAULT_NAMES[slot]) {
+    const guild = client.guilds.cache.get(process.env.GUILD_ID);
+    id = guild?.channels.cache.find((c) => c.isTextBased?.() && DEFAULT_NAMES[slot].test(c.name))?.id ?? null;
+  }
   if (!id) return null;
   try {
     return await client.channels.fetch(id);

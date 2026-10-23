@@ -23,7 +23,9 @@ async function request(method, path, body) {
   const wait = pausedUntil - Date.now();
   if (wait > 0) await sleep(wait);
 
-  const res = await fetch(`${BASE}${path}`, {
+  // Most data comes from v2; a few endpoints (bans) only exist on v1.
+  const url = path.startsWith('/v1/') ? `https://api.erlc.gg${path}` : `${BASE}${path}`;
+  const res = await fetch(url, {
     method,
     headers: { 'server-key': key, 'Content-Type': 'application/json', Accept: 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
@@ -109,6 +111,11 @@ async function drainCommands() {
 }
 
 // "PlayerName:12345" -> { name, id }
+// Server bans: { robloxId: username } (v1 only).
+async function getBans() {
+  return (await request('GET', '/v1/server/bans')) ?? {};
+}
+
 function parsePlayer(str) {
   if (!str || typeof str !== 'string') return { name: null, id: null };
   const i = str.lastIndexOf(':');
@@ -117,4 +124,4 @@ function parsePlayer(str) {
   return { name: str.slice(0, i), id: Number.isFinite(id) ? id : null };
 }
 
-module.exports = { getServer, getServerCached, runCommand, parsePlayer, ErlcError, lastServer: () => lastServer };
+module.exports = { getServer, getServerCached, getBans, runCommand, parsePlayer, ErlcError, lastServer: () => lastServer };

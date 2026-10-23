@@ -10,7 +10,9 @@ const web = require('../services/webEditor');
 
 const nameOpt = (o, desc = 'Saved embed') => o.setName('name').setDescription(desc).setRequired(true).setAutocomplete(true);
 
+// Server tool: hidden from everyone without Administrator; the code still only lets the bot owner run it.
 const data = new SlashCommandBuilder()
+  .setDefaultMemberPermissions(0)
   .setName('embed')
   .setDescription('Build custom embeds with images, buttons and menus (bot owner only).')
   .addSubcommand((s) => s.setName('create').setDescription('Start a new embed and open the builder.')

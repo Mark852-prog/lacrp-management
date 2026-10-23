@@ -252,6 +252,15 @@ CREATE TABLE IF NOT EXISTS discord_links (
   fetched_at INTEGER NOT NULL
 );
 
+-- Links made by staff with /verify for people Bloxlink can't verify. Always win over Bloxlink.
+CREATE TABLE IF NOT EXISTS manual_links (
+  discord_id  TEXT PRIMARY KEY,
+  roblox_id   INTEGER NOT NULL,
+  roblox_name TEXT,
+  linked_by   TEXT NOT NULL,
+  linked_at   INTEGER NOT NULL
+);
+
 -- ':log announce <keyword>' messages, managed with /announcement (seeded from config/announcements.json once).
 CREATE TABLE IF NOT EXISTS announcements (
   keyword    TEXT PRIMARY KEY,

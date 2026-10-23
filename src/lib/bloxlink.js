@@ -50,6 +50,8 @@ function fresh(row) {
 // Roblox user ID -> Discord user ID (only members of this server), null if not linked, UNKNOWN if we can't tell.
 async function robloxToDiscord(robloxId) {
   if (!robloxId) return null;
+  const manual = get('SELECT discord_id FROM manual_links WHERE roblox_id = ?', robloxId);
+  if (manual) return manual.discord_id;
   const cached = get('SELECT discord_id, fetched_at FROM roblox_links WHERE roblox_id = ?', robloxId);
   if (fresh(cached)) return cached.discord_id;
 
@@ -66,6 +68,8 @@ async function robloxToDiscord(robloxId) {
 // Discord user ID -> Roblox user ID, null if not linked, UNKNOWN if we can't tell.
 // force: skip the cache (e.g. right after someone verifies).
 async function discordToRoblox(discordId, { force = false } = {}) {
+  const manual = get('SELECT roblox_id FROM manual_links WHERE discord_id = ?', discordId);
+  if (manual) return manual.roblox_id;
   const cached = get('SELECT roblox_id, fetched_at FROM discord_links WHERE discord_id = ?', discordId);
   if (!force && fresh(cached)) return cached.roblox_id;
 
