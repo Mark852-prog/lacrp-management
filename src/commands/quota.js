@@ -25,7 +25,7 @@ const hoursText = (t) => (quota.hasQuota(t) ? `${formatDuration(t.weeklyHours * 
 
 async function execute(interaction) {
   const sub = interaction.options.getSubcommand();
-  if (!(await guard(interaction, sub === 'set' || sub === 'reset' ? 'owner' : 'highRank'))) return;
+  if (!(await guard(interaction, sub === 'set' || sub === 'reset' ? 'owner' : 'supervisor'))) return;
 
   if (sub === 'set') {
     const tier = interaction.options.getString('tier');

@@ -32,5 +32,12 @@
     "unlinkedCacheHours": 12,
     "dailyRequestBudget": 450
   },
-  "webEditorUrl": "http://de-01.rrhosting.eu:7765"
+  "webEditorUrl": "http://de-01.rrhosting.eu:7765",
+  "discordReminder": {
+    "enabled": true,
+    "checkEveryMinutes": 3,
+    "repeatEveryMinutes": 10,
+    "maxPerVisit": 3,
+    "message": "NOTICE You are not in our communitey! Join with code LACRLA to keep playing, or you will be kicked."
+  }
 }

@@ -4,10 +4,12 @@ const { sessionCard, sessionButtons, players } = require('../lib/sessionUi');
 const { activeSession, sessionStats, upcomingScheduled } = require('../lib/sessions');
 const { now } = require('../lib/db');
 const erlc = require('../lib/erlc');
+const { guard } = require('../lib/permissions');
 
 const data = new SlashCommandBuilder().setName('session-status').setDescription('Live status of the current session.');
 
 async function execute(interaction) {
+  if (!(await guard(interaction, 'supervisor'))) return;
   await interaction.deferReply();
   const session = activeSession();
   const server = await erlc.getServerCached(['Players', 'Queue']).catch(() => null);

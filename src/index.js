@@ -44,7 +44,36 @@ const client = new Client({
     GatewayIntentBits.MessageContent, // privileged: reading Vex / Utility Bot embeds
   ],
   partials: [Partials.Message, Partials.Channel],
+  // Interaction replies after "thinking..." go through the webhooks route. When Discord blocks that
+  // route for longer than a few seconds, fail at once (see failFast below) instead of waiting it out.
+  rest: { rejectOnRateLimit: (d) => /\/webhooks\//.test(d.route ?? '') && (d.timeToReset ?? d.retryAfter ?? 0) > 8000 },
 });
+
+// If editing/following up a reply is rate limited, deliver the answer another way: public answers as a
+// normal channel message that mentions the user, private (ephemeral) answers by DM.
+function failFast(interaction) {
+  for (const method of ['editReply', 'followUp']) {
+    const original = interaction[method].bind(interaction);
+    interaction[method] = async (options) => {
+      try {
+        return await original(options);
+      } catch (err) {
+        if (!String(err?.name).startsWith('RateLimitError')) throw err;
+        const payload = typeof options === 'string' ? { content: options } : { ...options };
+        delete payload.flags;
+        delete payload.ephemeral;
+        const privateReply = interaction.ephemeral || (options?.flags && (BigInt(options.flags) & BigInt(MessageFlags.Ephemeral)));
+        console.warn(`[rate limit] ${method} for /${interaction.commandName ?? interaction.customId} blocked - sending it ${privateReply ? 'by DM' : 'as a channel message'}`);
+        if (privateReply) return interaction.user.send(payload);
+        return interaction.channel.send({
+          ...payload,
+          content: `<@${interaction.user.id}>${payload.content ? ` ${payload.content}` : ''}`.slice(0, 2000),
+          allowedMentions: { users: [interaction.user.id] },
+        });
+      }
+    };
+  }
+}
 emojis.install(client);
 
 // ---- load commands ----
@@ -59,6 +88,13 @@ for (const file of fs.readdirSync(path.join(__dirname, 'commands')).filter((f) =
   for (const [prefix, fn] of Object.entries(mod.modals ?? {})) modals.set(prefix, fn);
   for (const [prefix, fn] of Object.entries(mod.selects ?? {})) selects.set(prefix, fn);
 }
+
+// Diagnostics: log whenever Discord makes the bot wait (rate limits), so slowness can be traced.
+client.rest.on('rateLimited', (i) => console.warn(`[rate limit] ${i.method} ${i.route} - wait ${Math.round((i.timeToReset ?? i.retryAfter ?? 0) / 1000)}s${i.global ? ' (GLOBAL)' : ''}`));
+client.rest.on('response', (req, res) => {
+  if (res.status === 429) console.warn(`[429] ${req.method} ${req.route} retry-after ${res.headers.get('retry-after')}s scope ${res.headers.get('x-ratelimit-scope')}`);
+});
+client.rest.on('restDebug', (msg) => { if (/global|Encountered/i.test(msg)) console.warn('[rest]', msg.split('\n')[0]); });
 
 client.once(Events.ClientReady, async (c) => {
   console.log(`Logged in as ${c.user.tag}`);
@@ -89,7 +125,12 @@ client.once(Events.ClientReady, async (c) => {
 
   logReaders.attach(c);
   nicknames.attach(c);
+  require('./services/verifiedRoles').attach(c);
+  require('./services/counting').attach(c);
   panels.attach(c);
+  require('./services/boosters').attach(c);
+  require('./services/sheetExport').runJob(c).catch((err) => console.error('[sheet export]', err)); // only when data/sheet-job.json exists
+  require('./services/boosters').runJob(c).catch((err) => console.error('[boosters]', err)); // only when data/booster-job.json exists
   require('./services/inGameRole').attach(c);
   require('./services/webEditor').start(c);
   require('./services/starterEmbeds').ensure();
@@ -98,6 +139,9 @@ client.once(Events.ClientReady, async (c) => {
     .finally(() => require('./services/mediaImport').runJob(c).catch((err) => console.error('[media import]', err)));
   require('./services/roleColors').runJob(c).catch((err) => console.error('[role colors]', err)); // only when data/role-colors-job.json exists
   require('./services/roleIcons').runJob(c).catch((err) => console.error('[role icons]', err)); // only when data/role-icons-job.json exists
+  require('./services/voiceLayout').runJob(c).catch((err) => console.error('[voice layout]', err)); // only when data/voice-job.json exists
+  require('./services/commandChannels').runJob(c).catch((err) => console.error('[command channels]', err)); // only when data/command-channels-job.json exists
+  require('./services/permDiag').runJob(c).catch((err) => console.error('[diag]', err)); // only when data/diag-job.json exists
   require('./services/permAudit').runJob(c).catch((err) => console.error('[perm audit]', err)); // only when data/perm-job.json exists
   require('./services/guidelines').refresh(c).catch(() => {}); // already-posted panels pick up design changes
   // Redraw posted polls, custom embeds and the commands panel so they use the latest emojis/layout.
@@ -132,6 +176,15 @@ async function toggleSessionPings(interaction) {
 
 client.on(Events.InteractionCreate, async (interaction) => {
   if (interaction.guildId !== process.env.GUILD_ID) return;
+  // Arrived late = gateway/event-loop lag; Discord drops answers sent after 3 s.
+  const lag = Date.now() - interaction.createdTimestamp;
+  if (lag > 1500) console.warn(`[slow] ${interaction.commandName ?? interaction.customId} by ${interaction.user.tag} arrived ${lag}ms after it was sent`);
+  if (interaction.isRepliable()) {
+    failFast(interaction);
+    // Commands answer directly when fast; buttons/menus get their own safety net (update()/deferUpdate()).
+    if (interaction.isChatInputCommand() || interaction.isModalSubmit()) require('./lib/quickReply').install(interaction);
+    else if (interaction.isMessageComponent()) require('./lib/quickReply').installComponent(interaction);
+  }
   try {
     if (interaction.isAutocomplete()) {
       return await commands.get(interaction.commandName)?.autocomplete?.(interaction);
@@ -147,6 +200,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await modals.get(interaction.customId.split(':')[0])?.(interaction);
     }
   } catch (err) {
+    if (err?.code === 10062) {
+      console.warn(`[slow] ${interaction.commandName ?? interaction.customId} by ${interaction.user.tag}: answer too late (${Date.now() - interaction.createdTimestamp}ms, arrived after ${lag}ms)`);
+      return;
+    }
     console.error(`[interaction ${interaction.commandName ?? interaction.customId}]`, err);
     if (interaction.isAutocomplete()) return;
     const msg = { content: channelPerms.explain(err) ?? '❌ Something went wrong running that. The error has been logged.', flags: MessageFlags.Ephemeral };

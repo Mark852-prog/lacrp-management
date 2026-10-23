@@ -1,0 +1,54 @@
+{
+  "_readme": "Voice channel layout applied by data/voice-job.json ({\"dryRun\": true} only reports). Roles: role names, or slot:<name> for roles set with /setup roles. 'from' = the channel's current exact name (or a list of possible names); no 'from' = created. divider: true = a ⎯⎯⎯ line (visible, nobody can join). Channels without their own 'access' are synced to the category, so voice channels added there later get the same permissions. removeCategories = categories deleted once they are empty.",
+  "sourceCategory": "Lounges ⎯⎯⎯⎯⎯⎯",
+  "afterCategory": "Misc",
+  "dividerName": "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯",
+  "dividerPattern": "^[⎯\\s]+$",
+  "everywhere": {
+    "Quarantined": { "deny": ["ViewChannel", "Connect", "SendMessages"] },
+    "Unverified": { "deny": ["ViewChannel"] }
+  },
+  "categories": [
+    {
+      "name": "Voice channels",
+      "access": {
+        "@everyone": { "deny": ["ViewChannel"] },
+        "slot:verified": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD"] }
+      },
+      "channels": [
+        { "from": ["Lounge 1"], "name": "Lounge 1" },
+        { "from": ["Lounge 2"], "name": "Lounge 2" },
+        { "divider": true },
+        { "from": ["Scene 1"], "name": "Scene 1" },
+        { "from": ["Scene 2"], "name": "Scene 2" },
+        { "from": ["Scene 3"], "name": "Scene 3" },
+        { "from": ["Traffic Stop 1"], "name": "Traffic Stop 1" },
+        { "from": ["Traffic Stop 2"], "name": "Traffic Stop 2" },
+        { "from": ["Civilian 1"], "name": "Civilian 1" },
+        { "divider": true },
+        { "from": ["Law Enforcement Radio"], "name": "Law Enforcement Radio", "access": { "slot:verified": { "allow": ["ViewChannel"], "deny": ["Connect"] }, "slot:staff": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] }, "Los Angeles Police Department": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] }, "Los Angeles Sheriffs Department": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] } } },
+        { "from": ["Fire & EMS Radio"], "name": "Fire & EMS Radio", "access": { "slot:verified": { "allow": ["ViewChannel"], "deny": ["Connect"] }, "slot:staff": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] }, "Los Angeles Fire Department": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] } } },
+        { "from": ["DOT Radio"], "name": "DOT Radio", "access": { "slot:verified": { "allow": ["ViewChannel"], "deny": ["Connect"] }, "slot:staff": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] }, "Los Angeles Caltrans": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] } } },
+        { "from": ["Government Radio"], "name": "Government Radio", "access": { "slot:verified": { "allow": ["ViewChannel"], "deny": ["Connect"] }, "slot:staff": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] }, "Los Angeles Government": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] } } }
+      ]
+    },
+    {
+      "name": "Staff Voice ⎯⎯⎯⎯⎯⎯",
+      "access": {
+        "@everyone": { "deny": ["ViewChannel"] },
+        "slot:staff": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD", "MoveMembers", "MuteMembers"] },
+        "slot:high_rank": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD", "MoveMembers", "MuteMembers"] },
+        "slot:senior_high_rank": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD", "MoveMembers", "MuteMembers"] }
+      },
+      "channels": [
+        { "from": ["Staff VC"], "name": "Staff VC" },
+        { "from": ["Mod Scene 1"], "name": "Mod Scene 1", "access": { "slot:verified": { "allow": ["ViewChannel", "Connect", "Speak", "UseVAD"] } } },
+        { "divider": true },
+        { "from": ["「🏢」HR Lounge"], "name": "「🏢」HR Lounge", "access": { "slot:staff": { "deny": ["ViewChannel"] }, "slot:high_rank": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD"] }, "slot:senior_high_rank": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD"] } } },
+        { "from": ["「☘️」Ghosts Office"], "name": "「☘️」Ghosts Office", "access": { "slot:staff": { "deny": ["ViewChannel"] }, "slot:high_rank": { "deny": ["ViewChannel"] }, "slot:senior_high_rank": { "deny": ["ViewChannel"] }, "Ghosts Key 🔑": { "allow": ["ViewChannel", "Connect", "Speak", "Stream", "UseVAD"] } } },
+        { "from": ["「☘️」ghosts-office"], "name": "「☘️」ghosts-office", "text": true, "access": { "slot:staff": { "deny": ["ViewChannel"] }, "slot:high_rank": { "deny": ["ViewChannel"] }, "slot:senior_high_rank": { "deny": ["ViewChannel"] }, "Ghosts Key 🔑": { "allow": ["ViewChannel", "SendMessages", "ReadMessageHistory"] } } }
+      ]
+    }
+  ],
+  "removeCategories": ["Roleplay Voice ⎯⎯⎯⎯⎯⎯", "Department Radio ⎯⎯⎯⎯⎯⎯", "Leadership ⎯⎯⎯⎯⎯⎯"]
+}

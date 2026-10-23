@@ -11,10 +11,12 @@ const refreshPanel = () => panels.refreshCommands().catch((e) => console.warn('[
 const TYPE_CHOICES = [{ name: 'Hint bar (:h)', value: 'h' }, { name: 'Full-screen message (:m)', value: 'm' }];
 const keywordOption = (o, desc = 'Announcement keyword') => o.setName('keyword').setDescription(desc).setRequired(true).setAutocomplete(true);
 
+// Server tool: hidden from everyone without Administrator; the code still only lets the bot owner run it.
 const data = new SlashCommandBuilder()
+  .setDefaultMemberPermissions(0)
   .setName('announcement')
-  .setDescription('The in-game ":log announce <keyword>" messages. Only the bot owner can change them.')
-  .addSubcommand((s) => s.setName('list').setDescription('Show every keyword and its message (any staff).'))
+  .setDescription('The in-game ":log announce <keyword>" messages. Bot owner only.')
+  .addSubcommand((s) => s.setName('list').setDescription('Show every keyword and its message.'))
   .addSubcommand((s) => s.setName('add').setDescription('Add a new announcement.')
     .addStringOption((o) => o.setName('keyword').setDescription('One word, e.g. "pizza" (letters, numbers, - or _)').setRequired(true).setMaxLength(32))
     .addStringOption((o) => o.setName('message').setDescription('What gets announced in-game').setRequired(true).setMaxLength(store.MAX_MESSAGE))
@@ -36,7 +38,7 @@ const describe = (a) => `\`${a.keyword}\`${a.label ? ` · ${a.label}` : ''} (${a
 async function execute(interaction) {
   const sub = interaction.options.getSubcommand();
   // Any staff member can see the list; changing anything is owner-only.
-  if (!(await guard(interaction, sub === 'list' ? 'staff' : 'owner'))) return;
+  if (!(await guard(interaction, 'owner'))) return;
   const reply = (content) => interaction.reply({ content, flags: MessageFlags.Ephemeral });
 
   if (sub === 'list') {

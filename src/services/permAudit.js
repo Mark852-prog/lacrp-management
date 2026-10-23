@@ -277,7 +277,95 @@ async function applyOps(guild, ops) {
       lines.push(`${unexpected.size ? 'FAILED' : 'OK '} #${clean(c.name)} threads: ${can.size ? `only ${can.map((r) => clean(r.name)).join(', ')}` : 'nobody'} (+ Administrator roles)${unexpected.size ? ` - unexpected: ${unexpected.map((r) => clean(r.name)).join(', ')}` : ''}`);
     }
   }
+  // ops.rename: { "current exact name": "new name" } - renames channels (names saved in the backup first).
+  for (const [from, to] of Object.entries(ops.rename ?? {})) {
+    const matches = guild.channels.cache.filter((c) => c.name === from);
+    if (matches.size !== 1) { lines.push(`SKIPPED ${from}: ${matches.size ? 'several channels share this name' : 'not found'}`); continue; }
+    await matches.first().setName(to, 'Channel restyle (owner request)')
+      .then(() => lines.push(`OK  ${from}  ->  ${to}`))
+      .catch((e) => lines.push(`FAILED ${from}: ${e.message}`));
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+
+  // ops.create: [{ category, name, topic?, roles: [role names] }] - private text channels only the listed
+  // roles (plus Administrator roles) can see. The category is created if missing; existing channels
+  // with the same name in that category are left alone.
+  for (const op of ops.create ?? []) {
+    let cat = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && norm(c.name) === norm(op.category));
+    if (!cat) {
+      cat = await guild.channels.create({
+        name: op.category, type: ChannelType.GuildCategory, reason: 'Membership channels (owner request)',
+        permissionOverwrites: [{ id: everyone.id, deny: [P.ViewChannel] }],
+      });
+      lines.push(`OK  created category ${clean(cat.name)}`);
+    }
+    if (guild.channels.cache.some((c) => c.parentId === cat.id && norm(c.name) === norm(op.name))) {
+      lines.push(`SKIPPED #${op.name}: already exists`);
+      continue;
+    }
+    const roles = op.roles.map((n) => [n, findRole(n)]);
+    for (const [n, r] of roles) if (!r) lines.push(`SKIPPED role "${n}" for #${op.name}: not found`);
+    const ch = await guild.channels.create({
+      name: op.name, type: ChannelType.GuildText, parent: cat.id, topic: op.topic, reason: 'Membership channels (owner request)',
+      permissionOverwrites: [
+        { id: everyone.id, deny: [P.ViewChannel] },
+        { id: guild.members.me.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] },
+        ...roles.filter(([, r]) => r).map(([, r]) => ({ id: r.id, allow: [P.ViewChannel, P.SendMessages, P.ReadMessageHistory] })),
+      ],
+    });
+    const fresh = await guild.channels.fetch(ch.id, { force: true });
+    const see = guild.roles.cache.filter((r) => !r.managed && !r.permissions.has(P.Administrator) && fresh.permissionsFor(r).has(P.ViewChannel));
+    lines.push(`OK  created #${clean(ch.name)} in ${clean(cat.name)} - visible to: ${see.map((r) => clean(r.name)).join(', ') || 'nobody'} (+ Administrator roles)`);
+  }
   return lines;
+}
+
+// ---------------------------------------------------------------- perk matrix
+// For every channel @everyone can type in: which of the four perks a member holding only the given
+// role (plus @everyone) actually gets there. Letters: A attach, G gifs/embeds, E ext emojis, S ext stickers.
+function perkMatrix(guild, roleNames) {
+  const everyone = guild.roles.everyone;
+  const cols = [['everyone', everyone], ...roleNames.map((n) => [n, guild.roles.cache.find((r) => norm(r.name) === norm(n))])];
+  const letters = (perms) => ['AttachFiles', 'EmbedLinks', 'UseExternalEmojis', 'UseExternalStickers']
+    .map((k, i) => (perms.has(PERKS[k]) ? 'AGES'[i] : '.')).join('');
+  const L = [`columns: ${cols.map(([n, r]) => `${n}${r ? '' : ' (NOT FOUND)'}`).join(' / ')}`];
+  // Channels a member with only the first listed role (e.g. Verified) can type in.
+  const base = cols[1]?.[1] ?? everyone;
+  const chans = guild.channels.cache.filter((c) => [ChannelType.GuildText, ChannelType.GuildForum, ChannelType.GuildVoice].includes(c.type)
+    && c.permissionsFor(base).has(P.ViewChannel) && c.permissionsFor(base).has(c.type === ChannelType.GuildForum ? P.SendMessagesInThreads : P.SendMessages))
+    .sort((a, b) => (a.parent?.position ?? -1) - (b.parent?.position ?? -1) || a.position - b.position);
+  for (const c of chans.values()) {
+    // X = @everyone has a red perk deny here (it overrides the paid roles' server-level perks).
+    const ow = c.permissionOverwrites?.cache.get(everyone.id);
+    const denied = ow ? perkList(ow.deny.bitfield).length : 0;
+    L.push(`${clean(c.name).slice(0, 24).padEnd(24)} ${denied ? 'X' : ' '} ${cols.map(([, r]) => (r ? letters(c.permissionsFor(r)) : '----')).join(' ')}`);
+  }
+  return L.join('\n');
+}
+
+// Where members of the given roles get their chat perks from: every role they hold that grants a
+// perk at server level (or Administrator), and the channels with a perk overwrite for those roles.
+// sources: { roles: [names], channel: name to test in, e.g. "general" }
+function perkSources(guild, { roles: names, channel: chName }) {
+  const L = [];
+  const ch = guild.channels.cache.find((c) => norm(c.name) === norm(chName ?? 'general'));
+  const perkMask = Object.values(PERKS).reduce((a, b) => a | b, 0n);
+  const short = (bits) => perkList(bits).map((p) => p.split(' ')[0]).join('+') || '-';
+  const granting = new Map();
+  for (const n of names) {
+    const role = guild.roles.cache.find((r) => norm(r.name) === norm(n));
+    if (!role) { L.push(`${n}: NOT FOUND`); continue; }
+    L.push(`## ${clean(role.name)} (${role.members.size} members)`);
+    for (const m of role.members.values()) {
+      const eff = ch ? ch.permissionsFor(m) : m.permissions;
+      const from = m.roles.cache.filter((r) => r.id !== guild.id && (r.permissions.has(P.Administrator) || (r.permissions.bitfield & perkMask)));
+      for (const r of from.values()) granting.set(r.id, r);
+      L.push(`${clean(m.user.username)}: in #${ch ? clean(ch.name) : '?'} gets ${eff.has(P.Administrator) ? 'EVERYTHING (Administrator)' : short(eff.bitfield)} | from roles: ${from.map((r) => `${clean(r.name)}${r.permissions.has(P.Administrator) ? '[ADMIN]' : `[${short(r.permissions.bitfield)}]`}`).join(', ') || 'none'}`);
+    }
+  }
+  L.push('', '## Roles granting perks to these members, and their member counts');
+  for (const r of granting.values()) L.push(`${clean(r.name)} | ${r.members.size} members | ${r.permissions.has(P.Administrator) ? 'Administrator' : short(r.permissions.bitfield)} | managed: ${r.managed}`);
+  return L.join('\n');
 }
 
 // ---------------------------------------------------------------- job runner (startup)
@@ -299,12 +387,30 @@ async function runJob(client) {
     lines.push('', '=== CHANGES (re-read from Discord afterwards) ===', ...checked, '', '=== SKIPPED / NOTES ===', ...(skipped.length ? skipped : ['none']));
   }
   if (job.ops) lines.push('', '=== EXPLICIT CHANGES (each re-read from Discord) ===', ...(await applyOps(guild, job.ops)));
+  if (job.matrix) out('perk-matrix.txt', perkMatrix(guild, job.matrix));
+  if (job.sources) out('perk-sources.txt', perkSources(guild, job.sources));
   out('perm-result.txt', lines.join('\n'));
   // Role colours (used to design matching role icons). null = no colour set.
   out('role-colors.json', JSON.stringify(guild.roles.cache
     .sort((a, b) => b.position - a.position)
     .map((r) => ({ name: r.name, color: r.color ? r.hexColor : null, members: r.members.size, managed: r.managed, icon: Boolean(r.icon || r.unicodeEmoji) })), null, 1));
-  out('guild-features.json', JSON.stringify({ premiumTier: guild.premiumTier, features: guild.features }));
+  // job.profile: { description?: text, splash?: 'assets/file.png', banner?: 'assets/file.png' } - server profile changes.
+  if (job.profile) {
+    const root = path.join(__dirname, '..', '..');
+    const edit = {};
+    if (job.profile.description !== undefined) edit.description = job.profile.description;
+    if (job.profile.splash) edit.splash = path.join(root, job.profile.splash);
+    if (job.profile.banner) edit.banner = path.join(root, job.profile.banner);
+    await guild.edit({ ...edit, reason: 'Server profile (owner request)' })
+      .then(() => lines.push(`OK  server profile updated: ${Object.keys(edit).join(', ')}`))
+      .catch((e) => lines.push(`FAILED server profile: ${e.message}`));
+    out('perm-result.txt', lines.join('\n'));
+  }
+  const fresh = await client.guilds.fetch({ guild: guild.id, force: true });
+  out('guild-features.json', JSON.stringify({
+    premiumTier: fresh.premiumTier, features: fresh.features, description: fresh.description, vanity: fresh.vanityURLCode,
+    banner: fresh.bannerURL({ size: 1024 }), splash: fresh.splashURL({ size: 1024 }), discoverySplash: fresh.discoverySplashURL({ size: 1024 }),
+  }, null, 1));
   out('perm-report.txt', report(guild));
   console.log(`[perm audit] done - see data/perm-report.txt and data/perm-result.txt`);
 }

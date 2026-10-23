@@ -1,7 +1,6 @@
 // Logic behind /server-check: who's not in the Discord, and who's driving a restricted vehicle/livery.
 const { get } = require('./db');
 const { config } = require('./config');
-const { role } = require('./guildConfig');
 const { parsePlayer } = require('./erlc');
 const { robloxToDiscord, UNKNOWN } = require('./bloxlink');
 const { can } = require('./permissions');
@@ -68,30 +67,29 @@ async function run(guild, server) {
     else if (m.status === 'unknown') unknown += 1;
   }
 
-  // Vehicle restrictions. Premium/VIP may use restricted vehicles and the Standard livery;
-  // staff liveries are for staff only (Premium/VIP doesn't unlock those).
-  const exemptRoles = ['premium', 'vip'].map(role).filter(Boolean);
-  // Prohibited vehicles are flagged for everyone - Premium/VIP don't unlock those.
+  // Vehicle restrictions. Only Server Boosters may use restricted vehicles. Restricted liveries (e.g.
+  // Standard) are for nobody, and staff liveries are for staff only. Prohibited vehicles: nobody.
+  const boosterRole = guild.roles.premiumSubscriberRole?.id ?? null;
   const { restrictedVehicles = [], prohibitedVehicles = [] } = config.vehicles;
   const flagged = [];
   for (const v of server.Vehicles ?? []) {
     const owner = byName.get(String(v.Owner).toLowerCase()) ?? { name: v.Owner, id: null, team: null };
     const m = owner.id ? memberOf.get(owner.id) : null;
     const member = m?.member ?? null;
-    const premium = Boolean(member && exemptRoles.some((r) => member.roles.cache.has(r)));
+    const booster = Boolean(member && boosterRole && member.roles.cache.has(boosterRole));
     const isStaff = Boolean(member && can(member, 'staff'));
 
     const reasons = [];
     if (prohibitedVehicles.some((r) => vehicleMatches(r, v.Name))) reasons.push('prohibited vehicle');
-    else if (!premium && restrictedVehicles.some((r) => vehicleMatches(r, v.Name))) reasons.push('restricted vehicle');
-    if (!premium && liveryRestricted(v.Texture, owner.team)) reasons.push(`restricted livery '${v.Texture}'`);
+    else if (!booster && restrictedVehicles.some((r) => vehicleMatches(r, v.Name))) reasons.push('restricted vehicle');
+    if (liveryRestricted(v.Texture, owner.team)) reasons.push(`restricted livery '${v.Texture}'`);
     if (!isStaff && staffLivery(v.Texture)) reasons.push(`staff livery '${v.Texture}' but not staff`);
     if (!reasons.length) continue;
-    // unverified = driver isn't linked to a Discord member, so Premium/VIP/staff can't be confirmed.
+    // unverified = driver isn't linked to a Discord member, so booster/staff status can't be confirmed.
     flagged.push({ vehicle: v, owner, member, reasons, unverified: !member });
   }
 
   return { players, notInDiscord, unknown, flagged };
 }
 
-module.exports = { run, vehicleMatches, liveryRestricted, staffLivery };
+module.exports = { run, membershipOf, vehicleMatches, liveryRestricted, staffLivery };
