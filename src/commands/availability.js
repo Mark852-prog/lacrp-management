@@ -3,13 +3,12 @@
 // Everything feeds /session-times (src/lib/availability.js).
 const { DateTime } = require('luxon');
 const {
-  SlashCommandBuilder, MessageFlags, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder,
+  SlashCommandBuilder, MessageFlags, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelType,
 } = require('discord.js');
 const { guard, can } = require('../lib/permissions');
 const { BRAND_COLOR, forEdit, ts } = require('../lib/embeds');
 const { sessionCard, bar } = require('../lib/sessionUi');
 const { withPing } = require('../lib/pings');
-const { postToSessions } = require('../lib/sessionPost');
 const { config } = require('../lib/config');
 const { run, get, all, now } = require('../lib/db');
 const av = require('../lib/availability');
@@ -24,7 +23,8 @@ const data = new SlashCommandBuilder()
     .addUserOption((o) => o.setName('member').setDescription('Who (default: you)')))
   .addSubcommand((s) => s.setName('clear').setDescription('Delete your saved availability.'))
   .addSubcommand((s) => s.setName('poll').setDescription('Post a "when can you play this week?" poll (Supervisor+).')
-    .addStringOption((o) => o.setName('question').setDescription('Question (default: "When can you play this week?")').setMaxLength(200)));
+    .addStringOption((o) => o.setName('question').setDescription('Question (default: "When can you play this week?")').setMaxLength(200))
+    .addChannelOption((o) => o.setName('channel').setDescription('Where to post it (default: this channel)').addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)));
 
 // ---------------------------------------------------------------- editor (ephemeral)
 const drafts = new Map(); // userId -> { days: [], blocks: [] } while picking
@@ -221,8 +221,9 @@ async function execute(interaction) {
   const question = interaction.options.getString('question') ?? 'When can you play this week?';
   const weekStart = Math.floor(DateTime.now().setZone(config.timezones.pollZone).startOf('day').toSeconds());
   const draft = { message_id: 'draft', created_by: interaction.user.id, week_start: weekStart, question, closed: 0 };
-  const msg = await postToSessions(interaction, withPing(pollMessage(draft), 'availability_poll'));
-  if (!msg) return;
+  // Not the sessions channel: that one only keeps the latest session post, so the poll would be deleted.
+  const channel = interaction.options.getChannel('channel') ?? interaction.channel;
+  const msg = await channel.send(withPing(pollMessage(draft), 'availability_poll'));
   run('INSERT INTO avail_polls(message_id, channel_id, created_by, created_at, week_start, question) VALUES(?, ?, ?, ?, ?, ?)',
     msg.id, msg.channel.id, interaction.user.id, now(), weekStart, question);
   return interaction.editReply(`🗓️ Availability poll posted in ${msg.channel}. Answers feed into \`/session-times\` automatically.`);

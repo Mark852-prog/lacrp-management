@@ -81,14 +81,11 @@ When you assign a Vex or Utility channel, the bot imports its message history, s
 | `/availability set` / `view` / `clear` | everyone |
 | `/server-check` | staff |
 | `/staff-request` | staff |
-| `/mod-calls view` | staff |
 | `/session-low-activity` | staff |
 | `/announcement list` | staff |
 | `/staff-request-approve` | Supervisor+ |
 | `/staff-request-deny` | Supervisor+ |
 | Approve / Deny buttons on queued staff requests | Supervisor+ |
-| `/mod-calls resolve` | Supervisor+ |
-| `/mod-calls clear` | Supervisor+ |
 | `/session-start` | Supervisor+ |
 | `/session-end` | Supervisor+ |
 | `/session-vote` | Supervisor+ |
@@ -191,7 +188,7 @@ The timezone list, time blocks and display timezones are in `config/timezones.js
 
 **Staff guide (each week)**
 - **Members** tap their timezone on the panel once. They then press **Set my availability** (or use `/availability set`), choose days and time blocks in their own time, and press **Save**. `/availability view` shows what they saved, and `/availability clear` deletes it. `/timezone view @member` shows anyone's timezone and current local time.
-- **Early in the week (Supervisor+):** post `/availability poll`. Members pick the days and times they can play this week. Each time is shown in EST, GMT and the member's own time. Press **Results** on the poll for a day-by-time grid and the list of who answered. Answers count automatically, so nothing needs copying.
+- **Early in the week (Supervisor+):** post `/availability poll channel:#<channel>` (not the sessions channel: that one only keeps the latest session post). Members pick the days and times they can play this week. Each time is shown in EST, GMT and the member's own time. Press **Results** on the poll for a day-by-time grid and the list of who answered. Answers count automatically, so nothing needs copying.
 - **Planning (Supervisor+):** run `/session-times`. It shows the 3–5 best slots for the next 7 days, how many members are likely free for each, and every slot in EST, PST, GMT, CET and AEST plus your own time. It also includes a heatmap by day and hour. Press **Schedule #1** (etc.) to announce that slot as a normal scheduled session, with you as host. You can also use `/session-schedule create` as usual.
 - **How the counts work:**
   - **Confirmed:** members who saved `/availability` (this repeats every week) or answered a poll for that week.
