@@ -37,8 +37,9 @@ const DIVISIONS = {
   ia: ['Head of Internal Affairs', 'Senior Internal Affairs', 'Internal Affairs', 'Junior Internal Affairs', 'Trial Internal Affairs'],
 };
 
-// A labelled line in the role list, e.g. "▬▬▬▬ Divisions ▬▬▬▬". Holds no permissions.
-const divider = (label) => ({ name: `▬▬▬▬ ${label} ▬▬▬▬`, color: 0, hoist: false });
+// A labelled line in the role list, e.g. "▬▬ Divisions ▬▬". Holds no permissions.
+// Kept short so it fits on one line in the phone app.
+const divider = (label) => ({ name: `▬▬ ${label} ▬▬`, color: 0, hoist: false });
 const group = (color, names) => names.map((name) => ({ name, color, hoist: false }));
 
 // Every role /setup manages, top to bottom.
