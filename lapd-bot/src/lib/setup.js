@@ -154,13 +154,19 @@ async function build(guild, progress = async () => {}) {
     if (role) { roleIds.set(r.spec.name, role.id); done.roles++; }
   }
 
-  // Put our roles in chain-of-command order, reusing the slots they already occupy (other roles don't move).
-  // Creating roles shifts everyone else's position, so read fresh positions first.
+  // Put our roles in chain-of-command order directly under the bot, with any other roles below them in
+  // their current order. Discord can give several roles the same position, so every role under the bot
+  // gets an explicit, unique position (1 = just above @everyone).
   await guild.roles.fetch();
-  const ours =ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r?.editable);
-  const slots = ours.map((r) => r.position).sort((a, b) => b - a);
-  if (ours.some((r, i) => r.position !== slots[i])) {
-    await attempt('Ordering roles', () => guild.roles.setPositions(ours.map((role, i) => ({ role, position: slots[i] }))));
+  const top = guild.members.me.roles.highest.position;
+  const below = [...guild.roles.cache.filter((r) => r.id !== guild.id && r.position < top).values()]
+    .sort((a, b) => b.position - a.position || a.id.localeCompare(b.id));
+  const ours = ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r && below.includes(r));
+  const ordered = [...ours, ...below.filter((r) => !ours.includes(r))];
+  if (ordered.some((r, i) => r !== below[i]) || new Set(below.map((r) => r.position)).size !== below.length) {
+    await attempt('Ordering roles', () => guild.roles.setPositions(
+      ordered.map((role, i) => ({ role, position: ordered.length - i })),
+    ));
   }
 
   const order = [];
