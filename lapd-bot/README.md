@@ -45,6 +45,13 @@ automatically). Point your RRHosting domain at the server's allocation and open 
 - `/` shows the seal, the motto, a random quote and whether the bot is online
 - `/health` returns JSON (`{"online": true, ...}`) for uptime monitors
 
+## Server setup (`/setup`)
+
+`/setup preview` lists the LAPD ranks, division roles, categories and channels the bot would create.
+`/setup build` creates whatever is missing. It never deletes or renames anything, and anything with the same
+name is left alone. The layout lives in `src/lib/layout.js`. The bot needs **Manage Roles** and **Manage Channels**;
+if it lacks them, `/setup` replies with a re-invite link.
+
 ## Making it yours
 
 - **Quotes:** edit `QUOTES` in `src/lib/branding.js`. The status changes every 5 minutes.
