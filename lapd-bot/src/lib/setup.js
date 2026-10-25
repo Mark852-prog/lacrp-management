@@ -106,11 +106,9 @@ function overwrites(guild, roleIds, { view, post, type }) {
     add(guild.id, 'deny', sendPerms);
     for (const name of postRoles) add(roleIds.get(name), 'allow', sendPerms);
   }
+  // The bot keeps everything it needs in every channel it locks down, or it can't change it again later.
   if (byId.size) {
-    byId.set(guild.members.me.id, {
-      id: guild.members.me.id, type: OverwriteType.Member,
-      allow: [P.ViewChannel, P.SendMessages, P.EmbedLinks, P.AttachFiles, P.Connect], deny: [],
-    });
+    byId.set(guild.members.me.id, { id: guild.members.me.id, type: OverwriteType.Member, allow: REQUIRED, deny: [] });
   }
   return [...byId.values()].filter((o) => o.id);
 }
@@ -188,13 +186,14 @@ async function build(guild, progress = async () => {}) {
     }
   }
 
-  // Our categories go after any others, each in layout order.
+  // Our categories go after any others, each in layout order. Channels are already in the right category
+  // (Discord only allows one category change per request here), so this only sets the order.
   await progress('Putting everything in order...');
   const others = guild.channels.cache.filter((c) => isCategory(c) && !order.some((o) => o.channel.id === c.id));
   const base = Math.max(-1, ...others.map((c) => c.position)) + 1;
   const positions = order.flatMap((o, i) => [
     { channel: o.channel.id, position: base + i },
-    ...o.items.map((c, j) => ({ channel: c.id, position: j, parent: o.channel.id, lockPermissions: false })),
+    ...o.items.map((c, j) => ({ channel: c.id, position: j })),
   ]);
   await attempt('Ordering channels', () => guild.channels.setPositions(positions));
 
