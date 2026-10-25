@@ -137,7 +137,14 @@ async function build(guild, progress = async () => {}) {
   await progress('Creating roles...');
   const roleIds = new Map();
   for (const r of current.roles) {
-    if (r.existing) { roleIds.set(r.spec.name, r.existing.id); continue; }
+    if (r.existing) {
+      roleIds.set(r.spec.name, r.existing.id);
+      const color = r.existing.colors?.primaryColor ?? r.existing.color;
+      if (r.existing.editable && (color !== r.spec.color || r.existing.hoist !== r.spec.hoist)) {
+        await attempt(`Role "${r.spec.name}"`, () => r.existing.edit({ colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, reason }));
+      }
+      continue;
+    }
     const role = await attempt(`Role "${r.spec.name}"`, () => guild.roles.create({
       name: r.spec.name, colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, permissions: [], reason,
     }));
