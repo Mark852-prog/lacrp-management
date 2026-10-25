@@ -2,7 +2,7 @@
 // moved, renamed and given the layout's permissions, and everything is put in order. Channels left over in
 // the [LAPD] categories are deleted only if nobody ever posted in them; anything with messages is kept.
 const { ChannelType, PermissionFlagsBits: P, PermissionsBitField, OverwriteType } = require('discord.js');
-const { ROLES, ACCESS, CATEGORIES, channelName, normalize, isLine, OWNED_CATEGORY } = require('./layout');
+const { ROLES, ACCESS, CATEGORIES, channelName, normalize, isLine, isLineRole, OWNED_CATEGORY } = require('./layout');
 
 // What the bot needs to build everything. Channel overwrites can only grant permissions the bot has itself.
 const REQUIRED = [
@@ -23,9 +23,13 @@ const isEmpty = (c) => !c.lastMessageId && !(c.type === ChannelType.GuildVoice &
 function plan(guild) {
   const all = guild.channels.cache;
   const used = new Set();
+  // Separator roles all share a name, so reuse the existing ones top to bottom.
+  const linePool = [...guild.roles.cache.filter((r) => isLineRole(r.name)).values()].sort((a, b) => b.position - a.position);
   const roles = ROLES.map((spec) => ({
     spec,
-    existing: guild.roles.cache.find((r) => normalize(r.name) === normalize(spec.name)) ?? null,
+    existing: (spec.line
+      ? linePool.shift()
+      : guild.roles.cache.find((r) => !isLineRole(r.name) && normalize(r.name) === normalize(spec.name))) ?? null,
   }));
 
   const categories = CATEGORIES.map((spec) => {
@@ -135,10 +139,12 @@ async function build(guild, progress = async () => {}) {
 
   // Roles, highest first. New roles land at the bottom of the list, so creating top-down keeps them in order.
   await progress('Creating roles...');
-  const roleIds = new Map();
+  const roleIds = new Map(); // by name, for channel permissions
+  const ourRoles = []; // in layout order, for ordering
   for (const r of current.roles) {
     if (r.existing) {
       roleIds.set(r.spec.name, r.existing.id);
+      ourRoles.push(r.existing.id);
       const color = r.existing.colors?.primaryColor ?? r.existing.color;
       const changed = r.existing.name !== r.spec.name || color !== r.spec.color || r.existing.hoist !== r.spec.hoist;
       if (r.existing.editable && changed) {
@@ -151,7 +157,7 @@ async function build(guild, progress = async () => {}) {
     const role = await attempt(`Role "${r.spec.name}"`, () => guild.roles.create({
       name: r.spec.name, colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, permissions: [], reason,
     }));
-    if (role) { roleIds.set(r.spec.name, role.id); done.roles++; }
+    if (role) { roleIds.set(r.spec.name, role.id); ourRoles.push(role.id); done.roles++; }
   }
 
   // Put our roles in chain-of-command order directly under the bot, with any other roles below them in
@@ -161,9 +167,9 @@ async function build(guild, progress = async () => {}) {
   const top = guild.members.me.roles.highest.position;
   const below = [...guild.roles.cache.filter((r) => r.id !== guild.id && r.position < top).values()]
     .sort((a, b) => b.position - a.position || a.id.localeCompare(b.id));
-  const ours = ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r && below.includes(r));
+  const ours = ourRoles.map((id) => guild.roles.cache.get(id)).filter((r) => r && below.includes(r));
   const ordered = [...ours, ...below.filter((r) => !ours.includes(r))];
-  if (ordered.some((r, i) => r !== below[i]) || new Set(below.map((r) => r.position)).size !== below.length) {
+  if (ordered.some((r, i) => r !== below[i])) {
     // Discord sometimes leaves the bot's role with a low position number after many roles are created
     // quickly. Then there aren't enough slots under it, and only someone above the bot can fix that.
     if (ordered.length >= top) {

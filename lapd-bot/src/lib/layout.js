@@ -37,14 +37,17 @@ const DIVISIONS = {
   ia: ['Head of Internal Affairs', 'Senior Internal Affairs', 'Internal Affairs', 'Junior Internal Affairs', 'Trial Internal Affairs'],
 };
 
-// A labelled line in the role list, e.g. "▬▬ Divisions ▬▬". Holds no permissions.
-// Kept short so it fits on one line in the phone app.
-const divider = (label) => ({ name: `▬▬ ${label} ▬▬`, color: 0, hoist: false });
+// A plain line role that separates sections on a member's profile. Every separator has the same name,
+// so /setup tells them apart by order. The label is only for reading this file.
+const ROLE_LINE_NAME = '▬'.repeat(20);
+const divider = (label) => ({ name: ROLE_LINE_NAME, line: true, label, color: 0, hoist: false });
 const group = (color, names) => names.map((name) => ({ name, color, hoist: false }));
 
 // Every role /setup manages, top to bottom.
 const ROLES = [
   ...RANKS.map((r) => ({ name: r.name, color: COLORS[r.tier], hoist: true })),
+  ...group(0x3e7cb1, DIVISIONS.training),
+  ...group(0x5c6f91, DIVISIONS.ia),
 
   divider('Command Groups'),
   ...group(0, [
@@ -67,8 +70,6 @@ const ROLES = [
   { name: 'Community Relations Office', color: 0x7f9cc9, hoist: false },
 
   divider('Division Ranks'),
-  ...group(0x3e7cb1, DIVISIONS.training),
-  ...group(0x5c6f91, DIVISIONS.ia),
   ...group(0x2f3b52, ['Metro Commander', 'Metro Supervisor', 'SWAT Operator', 'SWAT Candidate']),
   ...group(0x8c7a4a, ['Detective Supervisor', 'Detective', 'Detective Trainee']),
   ...group(0x4f8a8b, ['Traffic Supervisor', 'Motor Officer']),
@@ -145,61 +146,59 @@ const LINE = { type: 'line' }; // a locked divider channel between groups
 // Public categories use the framed name style ("︱🛬︱arrivals").
 const PUBLIC_CATEGORIES = [
   {
-    name: '[LAPD] • Welcome', view: 'everyone', post: 'hr',
+    name: '[LAPD] • Front Desk', view: 'everyone', post: 'hr',
     channels: [
-      text('🛬', 'arrivals'),
-      text('🛫', 'departures'),
-      text('🌎', 'about-us'),
-      text('📜', 'rules'),
+      text('👋', 'welcome'),
+      text('📜', 'department-rules'),
+      text('🗺️', 'server-guide'),
+      text('🔗', 'useful-links'),
     ],
   },
   {
-    name: '[LAPD] • Applications', view: 'everyone', post: 'hr',
+    name: '[LAPD] • Recruitment', view: 'everyone', post: 'hr',
     channels: [
-      text('📕', 'lapd-application'),
-      text('📗', 'application-results'),
+      text('🚔', 'join-the-lapd'),
+      text('📋', 'hiring-requirements'),
+      text('✅', 'application-status'),
     ],
   },
   {
-    name: '[LAPD] • Important', view: 'everyone', post: 'hr',
+    name: '[LAPD] • Headquarters Bulletin', view: 'everyone', post: 'hr',
     channels: [
-      text('📣', 'announcements'),
-      text('📢', 'change-logs'),
-      text('🚓', 'erlc-news'),
-      text('🎫', 'support'),
-      text('❗', 'info-desk'),
-      text('🚨', 'emergency-alerts'),
+      text('📢', 'announcements'),
+      text('📡', 'session-status'),
+      text('🛠️', 'server-updates'),
+      text('🎫', 'open-a-ticket'),
       LINE,
-      text('👑', 'hall-of-fame'),
-      text('🏅', 'chiefs-then-and-now'),
-      text('🏆', 'awards'),
+      text('🎖️', 'officer-spotlight'),
+      text('🏛️', 'wall-of-honor'),
+      text('📸', 'department-photos'),
       LINE,
-      text('🗞️', 'official-media'),
-      text('📰', 'press-releases'),
+      text('📰', 'press-office'),
     ],
   },
   {
-    name: '[LAPD] • Community', view: 'everyone', post: 'hr',
+    name: '[LAPD] • Community Hub', view: 'everyone', post: 'hr',
     channels: [
-      text('🎪', 'community'),
-      text('📰', 'lapd-quotes', { post: 'everyone' }),
-      text('🥳', 'events'),
-      text('🥳', 'event-results'),
-      text('💖', 'boosters'),
-      text('📍', 'self-roles'),
+      text('🎉', 'community-events'),
+      text('🏁', 'event-winners'),
+      text('🗳️', 'polls'),
+      text('🏷️', 'get-roles'),
+      text('💎', 'supporters'),
     ],
   },
   {
-    name: '[LAPD] • Public Communications', view: 'everyone', post: 'everyone',
+    name: '[LAPD] • Public Lounge', view: 'everyone', post: 'everyone',
     channels: [
-      text('💬', 'lounge'),
-      text('🎥', 'media'),
-      text('🤖', 'public-commands'),
-      text('❓', 'questions-answers'),
-      text('🙂', 'rate-an-officer'),
-      text('✍️', 'suggestions'),
+      text('💬', 'community-chat'),
+      text('🖼️', 'screenshots'),
+      text('🤖', 'bot-spam'),
+      text('❓', 'help-desk'),
+      LINE,
+      text('⭐', 'officer-ratings'),
+      text('💡', 'ideas'),
       text('📮', 'file-a-complaint'),
-      voice('🔊', 'Community Voice Chat'),
+      voice('🔊', 'Public Voice'),
     ],
   },
 ].map((cat) => ({ ...cat, channels: cat.channels.map((ch) => ({ ...ch, framed: true })) }));
@@ -348,8 +347,10 @@ const channelName = (ch) => {
 // Compares names without emoji, separators or case, so "📢 | announcements" matches "announcements".
 const normalize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const isLine = (name) => /^[▬━─—\-_=]+$/.test(name);
+// Separator roles, including the older labelled ones like "▬▬ Divisions ▬▬" that get renamed to plain lines.
+const isLineRole = (name) => isLine(name) || /^[▬━]+ [^▬━]+ [▬━]+$/.test(name);
 
 // Categories /setup looks after. Anything in one of these that isn't in the layout above is removed if it's empty.
 const OWNED_CATEGORY = /^\[LAPD\] •/;
 
-module.exports = { COLORS, RANKS, DIVISIONS, ROLES, ACCESS, CATEGORIES, channelName, normalize, isLine, OWNED_CATEGORY };
+module.exports = { COLORS, RANKS, DIVISIONS, ROLES, ACCESS, CATEGORIES, channelName, normalize, isLine, isLineRole, OWNED_CATEGORY };
