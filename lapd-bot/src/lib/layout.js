@@ -37,8 +37,8 @@ const DIVISIONS = {
   ia: ['Head of Internal Affairs', 'Senior Internal Affairs', 'Internal Affairs', 'Junior Internal Affairs', 'Trial Internal Affairs'],
 };
 
-// A labelled line in the role list, e.g. "━━━━━ Divisions ━━━━━". Holds no permissions.
-const divider = (label) => ({ name: `━━━━━ ${label} ━━━━━`, color: 0, hoist: false });
+// A labelled line in the role list, e.g. "▬▬▬▬ Divisions ▬▬▬▬". Holds no permissions.
+const divider = (label) => ({ name: `▬▬▬▬ ${label} ▬▬▬▬`, color: 0, hoist: false });
 const group = (color, names) => names.map((name) => ({ name, color, hoist: false }));
 
 // Every role /setup manages, top to bottom.
@@ -161,6 +161,7 @@ const CATEGORIES = [
       text('❓', 'questions'),
       LINE,
       text('🗒️', 'officer-feedback'),
+      text('📮', 'file-a-complaint'),
       text('🤖', 'bot-commands'),
     ],
   },
@@ -237,8 +238,6 @@ const CATEGORIES = [
       text('🚨', 'lapd-duty-chat'),
       text('📸', 'patrol-media'),
       text('🤖', 'lapd-commands'),
-      LINE,
-      text('🛡️', 'supervisor-chat', { view: 'supervisors' }),
     ],
   },
   {
@@ -265,35 +264,42 @@ const CATEGORIES = [
     name: '[LAPD] • Internal Affairs', view: 'ia',
     channels: [
       text('📢', 'ia-announcements', { post: 'iaLead' }),
-      text('ℹ️', 'ia-information', { post: 'iaLead' }),
-      text('📖', 'ia-handbook', { post: 'iaLead' }),
+      text('📚', 'ia-information', { post: 'iaLead' }),
       LINE,
-      text('📥', 'case-requests'),
-      text('📂', 'open-cases'),
-      text('🗄️', 'closed-cases'),
+      text('💬', 'ia-lounge'),
+      text('⚙️', 'ia-commands'),
       LINE,
-      text('📈', 'ia-promotions', { post: 'iaLead' }),
-      text('📉', 'ia-infractions', { post: 'iaLead' }),
-      LINE,
-      text('💬', 'ia-chat'),
+      text('🏆', 'ia-points', { post: 'iaLead' }),
+      text('📥', 'complaint-intake'),
+      text('🚫', 'discipline-requests'),
+      text('📨', 'appeal-requests'),
+      text('🔬', 'ia-evidence'),
+      text('🗂️', 'ia-logs'),
       voice('🔊', 'Interview Room'),
     ],
   },
   {
-    name: '[LAPD] • High Command', view: 'hr',
+    // Supervisors, High Command and Command Staff share one category; some channels are HR or SHR only.
+    name: '[LAPD] • SV / HR / SHR', view: 'supervisors',
     channels: [
       text('📢', 'command-announcements', { post: 'shr' }),
-      text('ℹ️', 'command-information', { post: 'shr' }),
+      text('📚', 'command-information', { post: 'shr' }),
+      text('📌', 'bulletin-board', { post: 'hr' }),
       LINE,
-      text('📈', 'promotion-requests'),
-      text('📝', 'infraction-requests'),
-      text('📅', 'loa-requests'),
+      text('💬', 'command-lounge'),
+      text('💻', 'command-bot-commands'),
+      text('🧯', 'department-issues'),
+      text('🧪', 'embed-testing', { view: 'hr' }),
       LINE,
-      text('💬', 'command-chat'),
-      text('📋', 'department-logs'),
+      text('🙋', 'personnel-requests'),
+      text('🏖️', 'loa-requests'),
+      text('📥', 'pending-applications', { view: 'hr' }),
+      text('⛔', 'pending-discipline', { view: 'hr' }),
+      text('🌟', 'officer-reviews'),
       LINE,
-      text('🔒', 'shr-chat', { view: 'shr' }),
-      text('🗂️', 'department-planning', { view: 'shr' }),
+      text('🗃️', 'command-logs', { view: 'hr' }),
+      text('🔎', 'audit-logs', { view: 'shr' }),
+      text('🗃️', 'probation-logs', { view: 'hr' }),
       voice('🔊', 'Command Room'),
       voice('🔒', "Chief's Office", { view: 'shr' }),
     ],
@@ -301,7 +307,7 @@ const CATEGORIES = [
 ];
 
 // How names look in Discord: "📢︱announcements" for text, "🔊 | Briefing Room" for voice.
-const LINE_NAME = '━━━━━━━━━━━━━━━━━━━━';
+const LINE_NAME = '▬▬▬▬▬▬▬▬▬▬▬▬';
 const channelName = (ch) => {
   if (ch.type === 'line') return LINE_NAME;
   return ch.type === 'voice' ? `${ch.emoji} | ${ch.name}` : `${ch.emoji}︱${ch.name}`;
@@ -309,7 +315,7 @@ const channelName = (ch) => {
 
 // Compares names without emoji, separators or case, so "📢 | announcements" matches "announcements".
 const normalize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-const isLine = (name) => /^[━─—\-_=]+$/.test(name);
+const isLine = (name) => /^[▬━─—\-_=]+$/.test(name);
 
 // Categories /setup looks after. Anything in one of these that isn't in the layout above is removed if it's empty.
 const OWNED_CATEGORY = /^\[LAPD\] •/;

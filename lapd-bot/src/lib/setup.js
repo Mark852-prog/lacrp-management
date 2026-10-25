@@ -140,8 +140,11 @@ async function build(guild, progress = async () => {}) {
     if (r.existing) {
       roleIds.set(r.spec.name, r.existing.id);
       const color = r.existing.colors?.primaryColor ?? r.existing.color;
-      if (r.existing.editable && (color !== r.spec.color || r.existing.hoist !== r.spec.hoist)) {
-        await attempt(`Role "${r.spec.name}"`, () => r.existing.edit({ colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, reason }));
+      const changed = r.existing.name !== r.spec.name || color !== r.spec.color || r.existing.hoist !== r.spec.hoist;
+      if (r.existing.editable && changed) {
+        await attempt(`Role "${r.spec.name}"`, () => r.existing.edit({
+          name: r.spec.name, colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, reason,
+        }));
       }
       continue;
     }
@@ -152,7 +155,9 @@ async function build(guild, progress = async () => {}) {
   }
 
   // Put our roles in chain-of-command order, reusing the slots they already occupy (other roles don't move).
-  const ours = ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r?.editable);
+  // Creating roles shifts everyone else's position, so read fresh positions first.
+  await guild.roles.fetch();
+  const ours =ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r?.editable);
   const slots = ours.map((r) => r.position).sort((a, b) => b - a);
   if (ours.some((r, i) => r.position !== slots[i])) {
     await attempt('Ordering roles', () => guild.roles.setPositions(ours.map((role, i) => ({ role, position: slots[i] }))));
