@@ -25,6 +25,7 @@ const DESCRIPTION = [
 // Rotated through as the bot's custom status.
 const QUOTES = [
   'Doughnuts are evidence. We are simply securing the scene.',
+  'Knock knock. It\'s the police. No, we will not leave a message.',
   'License and registration... and your excuse.',
   'You have the right to remain silent. Please use it.',
   'It\'s not a pursuit if you never stop chasing.',
