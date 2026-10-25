@@ -106,9 +106,11 @@ function overwrites(guild, roleIds, { view, post, type }) {
     add(guild.id, 'deny', sendPerms);
     for (const name of postRoles) add(roleIds.get(name), 'allow', sendPerms);
   }
-  // The bot keeps everything it needs in every channel it locks down, or it can't change it again later.
+  // The bot keeps what it hands out in every channel it locks down, or Discord won't let it set these
+  // overwrites. Manage Roles is left out: only admins may put that in an overwrite.
   if (byId.size) {
-    byId.set(guild.members.me.id, { id: guild.members.me.id, type: OverwriteType.Member, allow: REQUIRED, deny: [] });
+    const allow = REQUIRED.filter((p) => p !== P.ManageRoles);
+    byId.set(guild.members.me.id, { id: guild.members.me.id, type: OverwriteType.Member, allow, deny: [] });
   }
   return [...byId.values()].filter((o) => o.id);
 }
