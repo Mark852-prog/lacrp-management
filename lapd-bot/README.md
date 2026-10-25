@@ -29,7 +29,7 @@ Copy `.env.example` to `.env` and fill it in:
 
 ## 3. Hosting on RRHosting
 
-1. Create a **Node.js** server and choose Node 22 or 24.
+1. Create a **Node.js** server and choose Node 20 or newer.
 2. Upload everything in this `lapd-bot` folder **except** `node_modules` and `data`.
 3. Create `.env` in the panel's file manager with the keys above.
 4. Set the startup file to `src/index.js` (or the start command to `npm start`) and start it.
