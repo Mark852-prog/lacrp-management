@@ -7,8 +7,8 @@ module.exports = {
     .setName('setup')
     .setDescription('Build the LAPD roles and channels')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .addSubcommand((s) => s.setName('preview').setDescription('Show what would be created, without changing anything'))
-    .addSubcommand((s) => s.setName('build').setDescription('Create the missing roles and channels')),
+    .addSubcommand((s) => s.setName('preview').setDescription('Show what would change, without changing anything'))
+    .addSubcommand((s) => s.setName('build').setDescription('Make the server match the LAPD layout')),
 
   async execute(interaction) {
     const { guild } = interaction;
@@ -29,17 +29,22 @@ module.exports = {
       await guild.roles.fetch();
       await guild.channels.fetch();
       const current = setup.plan(guild);
-      const n = setup.countNew(current);
+      const n = setup.summary(current);
       const file = new AttachmentBuilder(Buffer.from(setup.describe(current)), { name: 'lapd-setup-preview.txt' });
       return interaction.editReply({
-        content: `**/setup build** would create ${n.roles} roles, ${n.categories} categories and ${n.channels} channels. `
-          + 'Anything that already exists (same name) is left alone. Full list attached.',
+        content: `**/setup build** would create ${n.roles} roles, ${n.categories} categories and ${n.channels} channels, `
+          + `move or rename ${n.moved} existing channels, and remove ${n.removed} empty leftovers`
+          + `${n.kept ? ` (${n.kept} leftovers have messages and will be kept)` : ''}. Full list attached.`,
         files: [file],
       });
     }
 
-    const { created, errors } = await setup.build(guild, (line) => interaction.editReply(line).catch(() => {}));
-    const lines = [`Done. Created ${created.roles} roles, ${created.categories} categories and ${created.channels} channels.`];
+    const { done, kept, errors } = await setup.build(guild, (line) => interaction.editReply(line).catch(() => {}));
+    const lines = [
+      `Done. Created ${done.roles} roles, ${done.categories} categories and ${done.channels} channels, `
+        + `updated ${done.moved} existing channels and removed ${done.removed} empty leftovers.`,
+    ];
+    if (kept.length) lines.push(`Kept because they have messages: ${kept.join(', ')}`);
     if (errors.length) lines.push('', `Some things failed:`, ...errors.slice(0, 15).map((e) => `- ${e}`));
     return interaction.editReply(lines.join('\n').slice(0, 2000));
   },

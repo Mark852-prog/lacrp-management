@@ -47,10 +47,11 @@ automatically). Point your RRHosting domain at the server's allocation and open 
 
 ## Server setup (`/setup`)
 
-`/setup preview` lists the LAPD ranks, division roles, categories and channels the bot would create.
-`/setup build` creates whatever is missing. It never deletes or renames anything, and anything with the same
-name is left alone. The layout lives in `src/lib/layout.js`. The bot needs **Manage Roles** and **Manage Channels**;
-if it lacks them, `/setup` replies with a re-invite link.
+`/setup preview` shows what would change. `/setup build` makes the server match the layout in `src/lib/layout.js`:
+it creates missing roles and channels, moves, renames and re-permissions existing ones (matched by name),
+puts everything in order with divider lines, and deletes channels left over in `[LAPD] •` categories only
+if nobody ever posted in them. The bot needs **Manage Roles** and **Manage Channels**; if it lacks them,
+`/setup` replies with a re-invite link.
 
 ## Making it yours
 
