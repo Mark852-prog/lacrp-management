@@ -142,41 +142,70 @@ const text = (emoji, name, opts = {}) => ({ type: 'text', emoji, name, ...opts }
 const voice = (emoji, name, opts = {}) => ({ type: 'voice', emoji, name, ...opts });
 const LINE = { type: 'line' }; // a locked divider channel between groups
 
-const CATEGORIES = [
+// Public categories use the framed name style ("︱🛬︱arrivals").
+const PUBLIC_CATEGORIES = [
   {
-    name: '[LAPD] • Front Desk', view: 'everyone', post: 'hr',
+    name: '[LAPD] • Welcome', view: 'everyone', post: 'hr',
     channels: [
-      text('👋', 'welcome'),
-      text('📜', 'guidelines'),
-      text('ℹ️', 'information'),
+      text('🛬', 'arrivals'),
+      text('🛫', 'departures'),
+      text('🌎', 'about-us'),
+      text('📜', 'rules'),
+    ],
+  },
+  {
+    name: '[LAPD] • Applications', view: 'everyone', post: 'hr',
+    channels: [
+      text('📕', 'lapd-application'),
+      text('📗', 'application-results'),
+    ],
+  },
+  {
+    name: '[LAPD] • Important', view: 'everyone', post: 'hr',
+    channels: [
+      text('📣', 'announcements'),
+      text('📢', 'change-logs'),
+      text('🚓', 'erlc-news'),
+      text('🎫', 'support'),
+      text('❗', 'info-desk'),
+      text('🚨', 'emergency-alerts'),
       LINE,
-      text('📢', 'announcements'),
+      text('👑', 'hall-of-fame'),
+      text('🏅', 'chiefs-then-and-now'),
+      text('🏆', 'awards'),
+      LINE,
+      text('🗞️', 'official-media'),
       text('📰', 'press-releases'),
     ],
   },
   {
-    name: '[LAPD] • Public Services', view: 'everyone', post: 'everyone',
+    name: '[LAPD] • Community', view: 'everyone', post: 'hr',
     channels: [
-      text('📝', 'applications', { post: 'hr' }),
-      text('🎫', 'support'),
-      text('❓', 'questions'),
-      LINE,
-      text('🗒️', 'officer-feedback'),
-      text('📮', 'file-a-complaint'),
-      text('🤖', 'bot-commands'),
+      text('🎪', 'community'),
+      text('📰', 'lapd-quotes', { post: 'everyone' }),
+      text('🥳', 'events'),
+      text('🥳', 'event-results'),
+      text('💖', 'boosters'),
+      text('📍', 'self-roles'),
     ],
   },
   {
-    name: '[LAPD] • Community', view: 'everyone', post: 'everyone',
+    name: '[LAPD] • Public Communications', view: 'everyone', post: 'everyone',
     channels: [
-      text('💬', 'community-chat'),
-      text('📷', 'community-media'),
-      text('🎉', 'community', { post: 'hr' }),
-      LINE,
-      text('⭐', 'hall-of-fame', { post: 'hr' }),
+      text('💬', 'lounge'),
+      text('🎥', 'media'),
+      text('🤖', 'public-commands'),
+      text('❓', 'questions-answers'),
+      text('🙂', 'rate-an-officer'),
+      text('✍️', 'suggestions'),
+      text('📮', 'file-a-complaint'),
       voice('🔊', 'Community Voice Chat'),
     ],
   },
+].map((cat) => ({ ...cat, channels: cat.channels.map((ch) => ({ ...ch, framed: true })) }));
+
+const CATEGORIES = [
+  ...PUBLIC_CATEGORIES,
   {
     name: '[LAPD] • Training Academy', view: 'trainees',
     channels: [
@@ -307,11 +336,13 @@ const CATEGORIES = [
   },
 ];
 
-// How names look in Discord: "📢︱announcements" for text, "🔊 | Briefing Room" for voice.
+// How names look in Discord: "📢︱announcements" for text, "🔊 | Briefing Room" for voice,
+// and "︱📢︱announcements" / "| 🔊 | Lounge" in the public categories.
 const LINE_NAME = '▬▬▬▬▬▬▬▬▬▬▬▬';
 const channelName = (ch) => {
   if (ch.type === 'line') return LINE_NAME;
-  return ch.type === 'voice' ? `${ch.emoji} | ${ch.name}` : `${ch.emoji}︱${ch.name}`;
+  if (ch.type === 'voice') return `${ch.framed ? '| ' : ''}${ch.emoji} | ${ch.name}`;
+  return `${ch.framed ? '︱' : ''}${ch.emoji}︱${ch.name}`;
 };
 
 // Compares names without emoji, separators or case, so "📢 | announcements" matches "announcements".
