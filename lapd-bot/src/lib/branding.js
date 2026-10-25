@@ -14,12 +14,10 @@ const MOTTO = 'To Protect and To Serve';
 
 // Shown as the bot's "About Me" on its profile (Discord allows up to 400 characters).
 const DESCRIPTION = [
-  'Official bot of the **Los Angeles Police Department** - LACRP.',
+  'Los Angeles Police Department | LACRP',
+  'To protect and to serve.',
   '',
-  '🚔 *To Protect and To Serve*',
-  '📋 Handling the paperwork so you can handle the pursuits.',
-  '',
-  '> "Doughnuts are evidence. We are simply securing the scene."',
+  'Pull over. Yes, you.',
 ].join('\n');
 
 // Rotated through as the bot's custom status.

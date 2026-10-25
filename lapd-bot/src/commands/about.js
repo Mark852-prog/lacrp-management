@@ -14,12 +14,11 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(COLORS.navy)
       .setAuthor({ name: 'Los Angeles Police Department', iconURL: 'attachment://seal.png' })
-      .setTitle(`🚔 ${MOTTO}`)
+      .setTitle(MOTTO)
       .setDescription([
-        'The official bot of the **LAPD** on Los Angeles City Roleplay.',
-        'More features are on the way. For now, stay safe out there, officers.',
+        'Los Angeles Police Department, LACRP.',
         '',
-        `> *"${randomQuote()}"*`,
+        `*${randomQuote()}*`,
       ].join('\n'))
       .setThumbnail('attachment://seal.png')
       .setImage('attachment://banner.png')
