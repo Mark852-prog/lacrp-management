@@ -164,9 +164,16 @@ async function build(guild, progress = async () => {}) {
   const ours = ROLES.map((spec) => guild.roles.cache.get(roleIds.get(spec.name))).filter((r) => r && below.includes(r));
   const ordered = [...ours, ...below.filter((r) => !ours.includes(r))];
   if (ordered.some((r, i) => r !== below[i]) || new Set(below.map((r) => r.position)).size !== below.length) {
-    await attempt('Ordering roles', () => guild.roles.setPositions(
-      ordered.map((role, i) => ({ role, position: ordered.length - i })),
-    ));
+    // Discord sometimes leaves the bot's role with a low position number after many roles are created
+    // quickly. Then there aren't enough slots under it, and only someone above the bot can fix that.
+    if (ordered.length >= top) {
+      errors.push(`Ordering roles: my role's position (${top}) is too low for the ${ordered.length} roles under it. `
+        + 'Drag the LAPD Headquarters role down one spot and back up in Server Settings → Roles, then run /setup build again.');
+    } else {
+      await attempt(`Ordering roles (bot at ${top}, ${ordered.length} below)`, () => guild.roles.setPositions(
+        ordered.map((role, i) => ({ role, position: ordered.length - i })),
+      ));
+    }
   }
 
   const order = [];
