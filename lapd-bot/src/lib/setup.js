@@ -16,7 +16,8 @@ const inviteLink = (appId) =>
   `https://discord.com/oauth2/authorize?client_id=${appId}&scope=bot+applications.commands&permissions=${new PermissionsBitField(REQUIRED).bitfield}`;
 
 const isCategory = (c) => c.type === ChannelType.GuildCategory;
-const isEmpty = (c) => !c.lastMessageId && !(c.members?.size);
+// For text channels `members` means everyone who can see it, so only count people in voice.
+const isEmpty = (c) => !c.lastMessageId && !(c.type === ChannelType.GuildVoice && c.members.size);
 
 // Works out what to create, change and remove, without touching anything.
 function plan(guild) {
@@ -138,7 +139,7 @@ async function build(guild, progress = async () => {}) {
   for (const r of current.roles) {
     if (r.existing) { roleIds.set(r.spec.name, r.existing.id); continue; }
     const role = await attempt(`Role "${r.spec.name}"`, () => guild.roles.create({
-      name: r.spec.name, color: r.spec.color, hoist: r.spec.hoist, permissions: [], reason,
+      name: r.spec.name, colors: { primaryColor: r.spec.color }, hoist: r.spec.hoist, permissions: [], reason,
     }));
     if (role) { roleIds.set(r.spec.name, role.id); done.roles++; }
   }
