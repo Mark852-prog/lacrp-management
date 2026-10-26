@@ -1,14 +1,13 @@
 // The LAPD server layout: ranks, division roles, categories and channels.
 // /setup makes the server match this file. Edit it to change the layout.
 
+// Rank colours: royal blues, lighter further down the chain of command.
 const COLORS = {
-  shr: 0x22408c,
-  hr: 0x2b4e9e,
-  supervisor: 0x355dae,
-  officer: 0x4169b8,
-  trainee: 0x5a7fc4,
-  training: 0x3e7cb1,
-  ia: 0x5c6f91,
+  shr: 0x1e3fae,
+  hr: 0x2550c4,
+  supervisor: 0x2d62d6,
+  officer: 0x3a74e0,
+  trainee: 0x6b95ea,
 };
 
 // Chain of command, highest first. `tier` decides which channels a rank can see.
@@ -37,47 +36,60 @@ const DIVISIONS = {
   ia: ['Head of Internal Affairs', 'Senior Internal Affairs', 'Internal Affairs', 'Junior Internal Affairs', 'Trial Internal Affairs'],
 };
 
-// A plain line role that separates sections on a member's profile. Every separator has the same name,
-// so /setup tells them apart by order. The label is only for reading this file.
-const ROLE_LINE_NAME = '▬'.repeat(20);
-const divider = (label) => ({ name: ROLE_LINE_NAME, line: true, label, color: 0, hoist: false });
+// A plain white line role that separates sections on a member's profile. It's long enough to sit on a row
+// of its own on phones. Every separator has the same name, so /setup tells them apart by order; the label
+// is only for reading this file.
+const ROLE_LINE_NAME = '▬'.repeat(32);
+const WHITE = 0xffffff;
+const divider = (label) => ({ name: ROLE_LINE_NAME, line: true, label, color: WHITE, hoist: false });
+// A section header role, e.g. "▬ [SV] Supervisory Personnel ▬▬▬▬▬▬▬▬▬▬▬▬▬▬".
+const header = (tag, name) => ({ name: `▬ [${tag}] ${name} ${'▬'.repeat(14)}`, color: WHITE, hoist: false });
 const group = (color, names) => names.map((name) => ({ name, color, hoist: false }));
+
+const DIVISION_COLORS = {
+  training: 0x3498db,
+  ia: 0x27ae60,
+  metro: 0x34495e,
+  detective: 0xb7950b,
+  traffic: 0x1abc9c,
+  k9: 0xa0522d,
+  air: 0x85c1e9,
+  community: 0x8e44ad,
+};
 
 // Every role /setup manages, top to bottom.
 const ROLES = [
   ...RANKS.map((r) => ({ name: r.name, color: COLORS[r.tier], hoist: true })),
-  ...group(0x3e7cb1, DIVISIONS.training),
-  ...group(0x5c6f91, DIVISIONS.ia),
+  ...group(DIVISION_COLORS.training, DIVISIONS.training),
+  ...group(DIVISION_COLORS.ia, DIVISIONS.ia),
 
   divider('Command Groups'),
-  ...group(0, [
-    '[CS] Command Staff',
-    '[HC] High Command',
-    '[SV] Supervisory Personnel',
-    '[PO] Police Officers',
-    '[PR] Probationary Officers',
-    'Los Angeles Police Department',
-  ]),
+  header('CS', 'Command Staff'),
+  header('HC', 'High Command'),
+  header('SV', 'Supervisory Personnel'),
+  header('PO', 'Police Officers'),
+  header('PR', 'Probationary Officers'),
+  { name: 'Los Angeles Police Department', color: 0x2f6db5, hoist: false },
 
   divider('Divisions'),
-  { name: 'Training Division', color: 0x3e7cb1, hoist: false },
-  { name: 'Internal Affairs Division', color: 0x5c6f91, hoist: false },
-  { name: 'Metropolitan Division', color: 0x2f3b52, hoist: false },
-  { name: 'Detective Bureau', color: 0x8c7a4a, hoist: false },
-  { name: 'Traffic Division', color: 0x4f8a8b, hoist: false },
-  { name: 'K-9 Unit', color: 0x7a5c3e, hoist: false },
-  { name: 'Air Support Division', color: 0x6c8fb3, hoist: false },
-  { name: 'Community Relations Office', color: 0x7f9cc9, hoist: false },
+  { name: 'Training Division', color: DIVISION_COLORS.training, hoist: false },
+  { name: 'Internal Affairs Division', color: DIVISION_COLORS.ia, hoist: false },
+  { name: 'Metropolitan Division', color: DIVISION_COLORS.metro, hoist: false },
+  { name: 'Detective Bureau', color: DIVISION_COLORS.detective, hoist: false },
+  { name: 'Traffic Division', color: DIVISION_COLORS.traffic, hoist: false },
+  { name: 'K-9 Unit', color: DIVISION_COLORS.k9, hoist: false },
+  { name: 'Air Support Division', color: DIVISION_COLORS.air, hoist: false },
+  { name: 'Community Relations Office', color: DIVISION_COLORS.community, hoist: false },
 
   divider('Division Ranks'),
-  ...group(0x2f3b52, ['Metro Commander', 'Metro Supervisor', 'SWAT Operator', 'SWAT Candidate']),
-  ...group(0x8c7a4a, ['Detective Supervisor', 'Detective', 'Detective Trainee']),
-  ...group(0x4f8a8b, ['Traffic Supervisor', 'Motor Officer']),
-  ...group(0x7a5c3e, ['K-9 Handler']),
-  ...group(0x6c8fb3, ['Air Unit Pilot']),
+  ...group(DIVISION_COLORS.metro, ['Metro Commander', 'Metro Supervisor', 'SWAT Operator', 'SWAT Candidate']),
+  ...group(DIVISION_COLORS.detective, ['Detective Supervisor', 'Detective', 'Detective Trainee']),
+  ...group(DIVISION_COLORS.traffic, ['Traffic Supervisor', 'Motor Officer']),
+  ...group(DIVISION_COLORS.k9, ['K-9 Handler']),
+  ...group(DIVISION_COLORS.air, ['Air Unit Pilot']),
 
   divider('Department Duties'),
-  ...group(0x8a9bb8, [
+  ...group(0xd4a017, [
     'Field Training Officer',
     'Application Reviewer',
     'Warrant Approver',
@@ -88,7 +100,7 @@ const ROLES = [
   ]),
 
   divider('Certifications'),
-  ...group(0x4a7a8c, [
+  ...group(0x2e86c1, [
     'Rifle Certified',
     'Less-Lethal Certified',
     'Pursuit Certified',
@@ -97,7 +109,7 @@ const ROLES = [
   ]),
 
   divider('Awards'),
-  ...group(0xc9a227, [
+  ...group(0xf1c40f, [
     'Medal of Valor',
     'Police Star',
     'Distinguished Service Medal',
@@ -107,18 +119,19 @@ const ROLES = [
   ]),
 
   divider('Time in Service'),
-  ...group(0x6b7a99, ['1 Year of Service', '6 Months of Service', '3 Months of Service', '1 Month of Service']),
+  { name: '1 Year of Service', color: 0xf1c40f, hoist: false },
+  ...group(0x2742d8, ['6 Months of Service', '3 Months of Service', '1 Month of Service']),
 
   divider('Notifications'),
-  ...group(0x99aab5, ['Session Ping', 'Announcement Ping', 'Training Ping', 'Event Ping', 'Poll Ping']),
+  ...group(0x5dade2, ['Session Ping', 'Announcement Ping', 'Training Ping', 'Event Ping', 'Poll Ping']),
 
   divider('Other'),
-  { name: 'Department Applicant', color: 0x9aa5b1, hoist: false },
-  { name: 'On Leave of Absence', color: 0x707a86, hoist: false },
-  { name: 'Suspended', color: 0x8b3a3a, hoist: false },
-  { name: 'Retired Officer', color: 0x5f6b7a, hoist: false },
-  { name: 'Los Angeles Resident', color: 0x7a8b6f, hoist: false },
-  { name: 'Media Permissions', color: 0, hoist: false },
+  { name: 'Department Applicant', color: 0xbdc3c7, hoist: false },
+  { name: 'On Leave of Absence', color: 0xecf0f1, hoist: false },
+  { name: 'Suspended', color: 0xc0392b, hoist: false },
+  { name: 'Retired Officer', color: 0x7f8c8d, hoist: false },
+  { name: 'Los Angeles Resident', color: 0x48c9b0, hoist: false },
+  { name: 'Media Permissions', color: 0x9b59b6, hoist: false },
 ];
 
 const ranksIn = (...tiers) => RANKS.filter((r) => tiers.includes(r.tier)).map((r) => r.name);
@@ -347,8 +360,8 @@ const channelName = (ch) => {
 // Compares names without emoji, separators or case, so "📢 | announcements" matches "announcements".
 const normalize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
 const isLine = (name) => /^[▬━─—\-_=]+$/.test(name);
-// Separator roles, including the older labelled ones like "▬▬ Divisions ▬▬" that get renamed to plain lines.
-const isLineRole = (name) => isLine(name) || /^[▬━]+ [^▬━]+ [▬━]+$/.test(name);
+// Separator roles are plain lines (section headers like "▬ [SV] ... ▬▬" have letters, so they don't count).
+const isLineRole = (name) => isLine(name);
 
 // Categories /setup looks after. Anything in one of these that isn't in the layout above is removed if it's empty.
 const OWNED_CATEGORY = /^\[LAPD\] •/;
