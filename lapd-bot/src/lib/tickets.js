@@ -9,22 +9,26 @@ const { ACCESS, normalize } = require('./layout');
 const { COLORS } = require('./branding');
 
 const BANNER = path.join(__dirname, '..', '..', 'assets', 'ticket-banner.webp');
-const CATEGORY_NAME = '📩 Open Tickets'; // kept outside the [LAPD] categories so /setup never touches it
+const CATEGORY_NAME = 'Open Tickets'; // kept outside the [LAPD] categories so /setup never touches it
 const TRANSCRIPTS = 'tickettranscripts';
 
-// `staff` is who can see and handle the ticket (see ACCESS in layout.js).
+// `staff` is who can see and handle the ticket (see ACCESS in layout.js). `emoji` is a custom server emoji name.
 const TYPES = {
   general: {
-    label: 'General Support', emoji: '❓', staff: 'supervisors',
-    description: 'Questions, problems or anything else.',
+    label: 'General Support', emoji: 'id_card', staff: 'supervisors',
+    description: 'Questions, concerns or technical problems.',
+    about: 'For any question, concern or technical problem you run into in the department. '
+      + 'This is not the place to report an officer; open an Officer Misconduct ticket for that.',
     fields: [
       ['subject', 'What do you need help with?', TextInputStyle.Short],
       ['details', 'Give us the details', TextInputStyle.Paragraph],
     ],
   },
   misconduct: {
-    label: 'Officer Misconduct', emoji: '🚨', staff: 'ia',
-    description: 'Report an officer. Handled by Internal Affairs.',
+    label: 'Officer Misconduct', emoji: 'ia_seal', staff: 'ia',
+    description: 'Report an officer to Internal Affairs.',
+    about: "For reporting an officer's conduct. Internal Affairs reviews every report, but action is only taken "
+      + 'when there is clear video evidence of what happened. Have your clip ready before you open the ticket.',
     fields: [
       ['officer', "Officer's name or callsign", TextInputStyle.Short],
       ['details', 'What happened?', TextInputStyle.Paragraph],
@@ -32,8 +36,10 @@ const TYPES = {
     ],
   },
   command: {
-    label: 'Command Staff', emoji: '🔒', staff: 'shr',
-    description: 'Serious misconduct by a high rank, or a transfer request.',
+    label: 'Command Staff', emoji: 'dhr', staff: 'shr',
+    description: 'Serious misconduct by a high rank, or a transfer.',
+    about: 'For serious misconduct or abuse of power by a high rank, and for transfer requests to Detective, SWAT '
+      + 'or another division. These go straight to Command Staff and are handled in confidence.',
     fields: [
       ['subject', 'What is this about?', TextInputStyle.Short],
       ['details', 'Give us the details', TextInputStyle.Paragraph],
@@ -41,31 +47,39 @@ const TYPES = {
   },
 };
 
-function panel() {
+// A custom server emoji by name, as message text ("<:name:id>") and as a component emoji. Empty if missing.
+const emoji = (guild, name) => guild.emojis.cache.find((e) => e.name === name);
+const emojiText = (guild, name) => emoji(guild, name)?.toString() ?? '';
+
+function panel(guild) {
+  const e = (name) => emojiText(guild, name);
   const banner = new AttachmentBuilder(BANNER, { name: 'ticket-banner.webp' });
   const embed = new EmbedBuilder()
     .setColor(COLORS.navy)
-    .setTitle('LAPD Ticket Support')
+    .setTitle(`${e('lapd_seal')} LAPD Ticket Support`.trim())
     .setDescription([
-      'Need help, or need to report something? Pick a ticket type from the menu below.',
+      'Welcome to LAPD ticket support. Use the menu below to reach the right team, and have everything '
+        + 'ready before you open a ticket so we can help you straight away.',
       '',
-      '**Before you open one**',
-      "• Say why you're opening it straight away. Empty or idle tickets get closed.",
-      "• Misconduct reports need video evidence. Screenshots and witness statements don't count.",
-      "• Don't ping staff or Internal Affairs while you wait.",
-      "• Infraction appeals don't go here.",
-      '',
-      '**Ticket types**',
-      ...Object.values(TYPES).map((t) => `${t.emoji} **${t.label}**: ${t.description}`),
+      `${e('rules')} **Before you open a ticket**`.trim(),
+      "- Say why you're opening the ticket as soon as it opens. Tickets left empty or idle are closed.",
+      '- Misconduct reports need video evidence. Screenshots and witness statements are not accepted.',
+      '- Be patient and respectful. Pinging Internal Affairs agents or Command Staff, or showing an attitude, '
+        + 'gets your ticket closed and can get you blacklisted from tickets.',
+      '- Infraction appeals and requests to be roled after a training are not handled through tickets.',
+      ...Object.values(TYPES).flatMap((t) => ['', `${e(t.emoji)} **${t.label}**`.trim(), t.about]),
     ].join('\n'))
     .setImage('attachment://ticket-banner.webp')
-    .setFooter({ text: 'Opening a ticket means you agree to the above.' });
+    .setFooter({ text: 'By opening a ticket, you agree to the guidelines above.' });
   const menu = new StringSelectMenuBuilder()
     .setCustomId('ticket:open')
     .setPlaceholder('Select a ticket type')
-    .addOptions(Object.entries(TYPES).map(([value, t]) => ({
-      value, label: t.label, emoji: t.emoji, description: t.description,
-    })));
+    .addOptions(Object.entries(TYPES).map(([value, t]) => {
+      const option = { value, label: t.label, description: t.description };
+      const custom = emoji(guild, t.emoji);
+      if (custom) option.emoji = { id: custom.id, name: custom.name };
+      return option;
+    }));
   return { embeds: [embed], components: [new ActionRowBuilder().addComponents(menu)], files: [banner] };
 }
 
@@ -76,8 +90,9 @@ const staffRoles = (guild, type) => (ACCESS[TYPES[type].staff] ?? [])
 const findOpen = (guild, type, userId) => guild.channels.cache.find((c) => c.topic === `ticket:${type}:${userId}`);
 
 async function ticketCategory(guild) {
-  const existing = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name === CATEGORY_NAME);
-  if (existing) return existing;
+  // Also picks up the older "📩 Open Tickets" name and renames it.
+  const existing = guild.channels.cache.find((c) => c.type === ChannelType.GuildCategory && c.name.endsWith(CATEGORY_NAME));
+  if (existing) return existing.name === CATEGORY_NAME ? existing : existing.setName(CATEGORY_NAME);
   return guild.channels.create({
     name: CATEGORY_NAME,
     type: ChannelType.GuildCategory,
@@ -129,7 +144,7 @@ async function onForm(interaction, type) {
 
   const embed = new EmbedBuilder()
     .setColor(COLORS.navy)
-    .setTitle(`${TYPES[type].emoji} ${TYPES[type].label}`)
+    .setTitle(`${emojiText(guild, TYPES[type].emoji)} ${TYPES[type].label}`.trim())
     .setDescription(`Opened by ${user}. Someone will be with you soon. Please don't ping staff.`)
     .addFields(TYPES[type].fields.map(([id, label]) => ({ name: label, value: interaction.fields.getTextInputValue(id) })))
     .setTimestamp();
