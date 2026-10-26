@@ -211,6 +211,7 @@ const PUBLIC_CATEGORIES = [
       text('⭐', 'officer-ratings'),
       text('💡', 'ideas'),
       text('📮', 'file-a-complaint'),
+      text('🗣️', 'tts-chat'),
       voice('🔊', 'Public Voice'),
     ],
   },
@@ -344,6 +345,17 @@ const CATEGORIES = [
       text('🗃️', 'probation-logs', { view: 'hr' }),
       voice('🔊', 'Command Room'),
       voice('🔒', "Chief's Office", { view: 'shr' }),
+    ],
+  },
+  {
+    // Where the moderation and utility bots post. Only Command Staff can read it; bots post with Administrator.
+    name: '[LAPD] • Server Logs', view: 'shr', post: 'nobody',
+    channels: [
+      text('🛡️', 'mod-logs'),
+      text('💬', 'message-logs'),
+      text('👥', 'member-logs'),
+      text('🔐', 'security-logs'),
+      text('🎫', 'ticket-transcripts'),
     ],
   },
 ];
