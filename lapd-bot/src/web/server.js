@@ -24,6 +24,11 @@ function start(client) {
       res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' });
       return fs.createReadStream(path.join(ASSETS, url === '/seal.png' ? 'avatar.png' : 'banner.png')).pipe(res);
     }
+    // Banner for the Tickets bot panel (its dashboard needs a public image link).
+    if (url === '/ticket-banner.webp') {
+      res.writeHead(200, { 'content-type': 'image/webp', 'cache-control': 'public, max-age=86400' });
+      return fs.createReadStream(path.join(ASSETS, 'ticket-banner.webp')).pipe(res);
+    }
     if (url === '/') {
       const html = PAGE
         .replace('{{QUOTE}}', escape(randomQuote()))
