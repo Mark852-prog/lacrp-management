@@ -6,6 +6,7 @@ const path = require('node:path');
 const { Client, GatewayIntentBits, Events, MessageFlags } = require('discord.js');
 const branding = require('./lib/branding');
 const web = require('./web/server');
+const tickets = require('./lib/tickets');
 
 for (const key of ['DISCORD_TOKEN', 'GUILD_ID']) {
   if (!process.env[key]) {
@@ -39,6 +40,14 @@ client.once(Events.ClientReady, async (c) => {
 });
 
 client.on(Events.InteractionCreate, async (interaction) => {
+  // Ticket panel menus, forms and buttons.
+  if (interaction.customId?.startsWith('ticket:')) {
+    return tickets.handle(interaction).catch((err) => {
+      console.error('Ticket action failed:', err);
+      const reply = { content: 'Something went wrong with that ticket action. Try again in a moment.', flags: MessageFlags.Ephemeral };
+      return (interaction.replied || interaction.deferred ? interaction.followUp(reply) : interaction.reply(reply)).catch(() => {});
+    });
+  }
   if (!interaction.isChatInputCommand()) return;
   const command = commands.get(interaction.commandName);
   if (!command) return;
