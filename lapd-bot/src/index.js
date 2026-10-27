@@ -65,6 +65,9 @@ process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', 
 client.rest.on('rateLimited', (info) => console.warn(
   `Rate limited on ${info.method} ${info.route} for ${Math.round(info.timeToReset / 1000)}s${info.global ? ' (global)' : ''}`,
 ));
+client.rest.on('response', (req, res) => {
+  if (res.status === 429) console.warn(`Rate limited (429) on ${req.method} ${req.route}, retrying`);
+});
 
 web.start(client);
 client.login(process.env.DISCORD_TOKEN);

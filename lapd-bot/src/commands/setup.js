@@ -39,13 +39,18 @@ module.exports = {
       });
     }
 
-    const { done, kept, errors } = await setup.build(guild, (line) => interaction.editReply(line).catch(() => {}));
+    // Progress edits are fire-and-forget: if Discord rate-limits reply edits, the build carries on anyway.
+    const { done, kept, errors } = await setup.build(guild, (line) => {
+      console.log(`/setup: ${line}`);
+      interaction.editReply(line).catch(() => {});
+    });
     const lines = [
       `Done. Created ${done.roles} roles, ${done.categories} categories and ${done.channels} channels, `
         + `updated ${done.moved} existing channels and removed ${done.removed} empty leftovers.`,
     ];
     if (kept.length) lines.push(`Kept because they have messages: ${kept.join(', ')}`);
     if (errors.length) lines.push('', `Some things failed:`, ...errors.slice(0, 15).map((e) => `- ${e}`));
+    console.log(`/setup: ${lines.join('\n')}`);
     return interaction.editReply(lines.join('\n').slice(0, 2000));
   },
 };
