@@ -18,6 +18,8 @@ const inviteLink = (appId) =>
 const isCategory = (c) => c.type === ChannelType.GuildCategory;
 // For text channels `members` means everyone who can see it, so only count people in voice.
 const isEmpty = (c) => !c.lastMessageId && !(c.type === ChannelType.GuildVoice && c.members.size);
+// A layout entry matches its current name or any old name in `was`, so renamed channels keep their history.
+const matches = (name, spec) => [spec.name, ...(spec.was ?? [])].some((n) => normalize(n) === normalize(name));
 
 // Works out what to create, change and remove, without touching anything.
 function plan(guild) {
@@ -33,7 +35,7 @@ function plan(guild) {
   }));
 
   const categories = CATEGORIES.map((spec) => {
-    const existing = all.find((c) => isCategory(c) && normalize(c.name) === normalize(spec.name)) ?? null;
+    const existing = all.find((c) => isCategory(c) && matches(c.name, spec)) ?? null;
     if (existing) used.add(existing.id);
     // Dividers all share a name, so reuse the ones already in this category, in order.
     const lines = existing
@@ -42,7 +44,7 @@ function plan(guild) {
     const channels = spec.channels.map((ch) => {
       const found = ch.type === 'line'
         ? lines.shift()
-        : all.find((c) => !isCategory(c) && !isLine(c.name) && !used.has(c.id) && normalize(c.name) === normalize(ch.name));
+        : all.find((c) => !isCategory(c) && !isLine(c.name) && !used.has(c.id) && matches(c.name, ch));
       if (found) used.add(found.id);
       return { spec: ch, existing: found ?? null };
     });
@@ -188,7 +190,9 @@ async function build(guild, progress = async () => {}) {
     const catPerms = overwrites(guild, roleIds, { view: cat.spec.view, post: cat.spec.post ?? cat.spec.view, type: 'text' });
     let parent = cat.existing;
     if (parent) {
-      await attempt(`Category "${cat.spec.name}"`, () => parent.edit({ permissionOverwrites: catPerms, reason }));
+      const patch = { permissionOverwrites: catPerms, reason };
+      if (parent.name !== cat.spec.name) patch.name = cat.spec.name;
+      await attempt(`Category "${cat.spec.name}"`, () => parent.edit(patch));
     } else {
       parent = await attempt(`Category "${cat.spec.name}"`, () => guild.channels.create({
         name: cat.spec.name, type: ChannelType.GuildCategory, permissionOverwrites: catPerms, reason,
