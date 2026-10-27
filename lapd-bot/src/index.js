@@ -61,6 +61,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 });
 
 process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+// discord.js waits out rate limits silently, which looks like a hang. Say when it happens.
+client.rest.on('rateLimited', (info) => console.warn(
+  `Rate limited on ${info.method} ${info.route} for ${Math.round(info.timeToReset / 1000)}s${info.global ? ' (global)' : ''}`,
+));
 
 web.start(client);
 client.login(process.env.DISCORD_TOKEN);
