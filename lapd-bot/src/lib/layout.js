@@ -156,65 +156,64 @@ const text = (emoji, name, opts = {}) => ({ type: 'text', emoji, name, ...opts }
 const voice = (emoji, name, opts = {}) => ({ type: 'voice', emoji, name, ...opts });
 const LINE = { type: 'line' }; // a locked divider channel between groups
 
-// Public channels have plain names, no emoji ("department-rules"). `was` lists old names, so /setup renames
-// those channels in place instead of making new ones.
-const plain = (name, opts = {}) => ({ type: 'text', name, ...opts });
+// Public categories use the framed name style ("︱📜︱department-rules"). `was` lists old names, so /setup
+// renames those channels in place instead of making new ones.
 const PUBLIC_CATEGORIES = [
   {
     name: '[LAPD] • Public Information', was: ['[LAPD] • Front Desk'], view: 'everyone', post: 'hr',
     channels: [
-      plain('welcome'),
-      plain('department-rules'),
-      plain('server-guide'),
-      plain('official-links', { was: ['useful-links'] }),
+      text('🏛️', 'welcome'),
+      text('📜', 'department-rules'),
+      text('🧭', 'server-guide'),
+      text('🔗', 'official-links', { was: ['useful-links'] }),
     ],
   },
   {
     name: '[LAPD] • Recruitment', view: 'everyone', post: 'hr',
     channels: [
-      plain('join-the-lapd'),
-      plain('hiring-requirements'),
-      plain('application-results', { was: ['application-status'] }),
+      text('🚔', 'join-the-lapd'),
+      text('📋', 'hiring-requirements'),
+      text('📨', 'application-results', { was: ['application-status'] }),
     ],
   },
   {
     name: '[LAPD] • Headquarters', was: ['[LAPD] • Headquarters Bulletin'], view: 'everyone', post: 'hr',
     channels: [
-      plain('announcements'),
-      plain('session-status'),
-      plain('server-updates'),
-      plain('press-releases', { was: ['press-office'] }),
+      text('📢', 'announcements'),
+      text('📡', 'session-status'),
+      text('🛠️', 'server-updates'),
+      text('📰', 'press-releases', { was: ['press-office'] }),
       LINE,
-      plain('officer-of-the-month', { was: ['officer-spotlight'] }),
-      plain('wall-of-honor'),
-      plain('media-gallery', { was: ['department-photos'] }),
+      text('🎖️', 'officer-of-the-month', { was: ['officer-spotlight'] }),
+      text('🏅', 'wall-of-honor'),
+      text('📷', 'media-gallery', { was: ['department-photos'] }),
     ],
   },
   {
     name: '[LAPD] • Public Services', view: 'everyone', post: 'hr',
     channels: [
-      plain('open-a-ticket'),
-      plain('public-inquiries', { was: ['help-desk'], post: 'everyone' }),
-      plain('suggestions', { was: ['ideas'], post: 'everyone' }),
+      text('🎫', 'open-a-ticket'),
+      text('📞', 'public-inquiries', { was: ['help-desk'], post: 'everyone' }),
+      text('📝', 'suggestions', { was: ['ideas'], post: 'everyone' }),
     ],
   },
   {
     name: '[LAPD] • Community Relations', was: ['[LAPD] • Community Hub'], view: 'everyone', post: 'hr',
     channels: [
-      plain('community-events'),
-      plain('notification-roles', { was: ['get-roles'] }),
+      text('📅', 'community-events'),
+      text('🔔', 'notification-roles', { was: ['get-roles'] }),
     ],
   },
   {
     name: '[LAPD] • Public Lobby', was: ['[LAPD] • Public Lounge'], view: 'everyone', post: 'everyone',
     channels: [
-      plain('general-chat', { was: ['community-chat'] }),
-      plain('bot-commands', { was: ['bot-spam'] }),
-      plain('tts-chat'),
-      { type: 'voice', name: 'Lobby Voice', was: ['Public Voice'] },
+      text('💬', 'general-chat', { was: ['community-chat'] }),
+      text('⚙️', 'bot-commands', { was: ['bot-spam'] }),
+      text('🎙️', 'tts-chat'),
+      voice('🔊', 'Lobby Voice', { was: ['Public Voice'] }),
     ],
   },
-];
+].map((cat) => ({ ...cat, channels: cat.channels.map((ch) => ({ ...ch, framed: true })) }));
 
 const CATEGORIES = [
   ...PUBLIC_CATEGORIES,
@@ -360,13 +359,12 @@ const CATEGORIES = [
 ];
 
 // How names look in Discord: "📢︱announcements" for text, "🔊 | Briefing Room" for voice,
-// and just the name for public channels, which have no emoji.
+// and "︱📢︱announcements" / "| 🔊 | Lounge" in the public categories.
 const LINE_NAME = '▬▬▬▬▬▬▬▬▬▬▬▬';
 const channelName = (ch) => {
   if (ch.type === 'line') return LINE_NAME;
-  if (!ch.emoji) return ch.name;
-  if (ch.type === 'voice') return `${ch.emoji} | ${ch.name}`;
-  return `${ch.emoji}︱${ch.name}`;
+  if (ch.type === 'voice') return `${ch.framed ? '| ' : ''}${ch.emoji} | ${ch.name}`;
+  return `${ch.framed ? '︱' : ''}${ch.emoji}︱${ch.name}`;
 };
 
 // Compares names without emoji, separators or case, so "📢 | announcements" matches "announcements".
