@@ -1,25 +1,11 @@
 // The two "nudge" posts: manual low-activity and automatic high-activity / server-full.
 // Layout: SESSIONS banner, one bold hook line, 1-2 short supporting lines, Join + notification buttons.
 const { config } = require('./config');
-const { withPing } = require('./pings');
-const { sessionCard, sessionButtons, players } = require('./sessionUi');
+const { withPing, rolesFor } = require('./pings');
+const { sessionCard, sessionButtons, players, buildLowActivityPost } = require('./sessionUi');
 
 function lowActivityMessage(guild, server) {
-  const name = config.settings.serverName;
-  const { top, main, files } = sessionCard();
-  main.setTitle('📣 Low Player Activity')
-    .setDescription(
-      `**A ${name} session is currently experiencing low player activity.**\n\n` +
-      'Join now to help create realistic scenes, support active departments, and keep the roleplay going!\n' +
-      '-# The session may end early if activity doesn\'t improve — help bring it back to life!',
-    );
-  if (server) {
-    main.addFields(
-      { name: 'Players', value: `${players(server)}`, inline: true },
-      { name: 'Join code', value: `\`${server.JoinKey}\``, inline: true },
-    );
-  }
-  return withPing({ embeds: [top, main], files, components: sessionButtons(server?.JoinKey) }, 'low_activity');
+  return buildLowActivityPost({ pingRoles: rolesFor('low_activity'), serverInfo: server, code: server?.JoinKey });
 }
 
 function highActivityMessage(guild, server) {
