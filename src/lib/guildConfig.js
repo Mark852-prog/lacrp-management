@@ -13,6 +13,7 @@ const ROLE_SLOTS = {
   loa: 'Leave of Absence (excused from quota)',
   premium: 'Premium members (allowed restricted vehicles/liveries)',
   vip: 'VIP members (allowed restricted vehicles/liveries)',
+  booster: 'Server Booster (booster perk: allowed restricted vehicles/liveries)',
   verified: 'Bloxlink verified role (getting it triggers the Roblox-username nickname)',
   in_game: 'In-Game (given while someone is in the ER:LC server)',
 };
@@ -21,6 +22,7 @@ const CHANNEL_SLOTS = {
   staff_requests: 'Staff request queue',
   sessions: 'Session announcements (start/end/schedule/poll/vote/alerts)',
   dc_logs: 'DC (Discord check) log',
+  counting: 'Counting game channel (members count up 1, 2, 3... one number each)',
   vex_shift_logs: 'Vex shift logs (read-only - where Vex posts Shift Ended)',
   infractions: 'Utility Bot infractions (read-only)',
   promotions: 'Utility Bot promotions (read-only)',

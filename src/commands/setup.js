@@ -100,7 +100,7 @@ function vehicleReport(server) {
   return `**Spawned vehicles (${lines.length})**, named exactly as ER:LC reports them:\n` +
     `${lines.join('\n').slice(0, 1700) || 'None spawned.'}\n\n` +
     `Restricted liveries (exact name): ${liveries}, not checked for: ${liveryIgnoredTeams.join(', ') || 'no teams'} (config/vehicles.json). ` +
-    'Premium/VIP drivers are skipped in /server-check.';
+    'Premium/VIP/Booster drivers are skipped in /server-check (except for prohibited and staff-only vehicles/liveries).';
 }
 
 async function execute(interaction) {

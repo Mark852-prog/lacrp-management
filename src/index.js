@@ -91,6 +91,7 @@ client.once(Events.ClientReady, async (c) => {
   nicknames.attach(c);
   panels.attach(c);
   require('./services/inGameRole').attach(c);
+  require('./services/counting').attach(c);
   require('./services/webEditor').start(c);
   require('./services/starterEmbeds').ensure();
   // Cleanup first (removes unwanted files), then the import (only when their job files exist).

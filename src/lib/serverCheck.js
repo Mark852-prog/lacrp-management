@@ -68,10 +68,10 @@ async function run(guild, server) {
     else if (m.status === 'unknown') unknown += 1;
   }
 
-  // Vehicle restrictions. Premium/VIP may use restricted vehicles and the Standard livery;
-  // staff liveries are for staff only (Premium/VIP doesn't unlock those).
-  const exemptRoles = ['premium', 'vip'].map(role).filter(Boolean);
-  // Prohibited vehicles are flagged for everyone - Premium/VIP don't unlock those.
+  // Vehicle restrictions. Premium/VIP/Server Booster may use restricted vehicles and the Standard
+  // livery; staff liveries are for staff only (those perks don't unlock them).
+  const exemptRoles = ['premium', 'vip', 'booster'].map(role).filter(Boolean);
+  // Prohibited vehicles are flagged for everyone - the perk roles don't unlock those.
   const { restrictedVehicles = [], prohibitedVehicles = [] } = config.vehicles;
   const flagged = [];
   for (const v of server.Vehicles ?? []) {
