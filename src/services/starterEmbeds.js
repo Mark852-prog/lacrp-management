@@ -61,6 +61,8 @@ function verification(guildId) {
 }
 
 function ensure() {
+  // Brings back embeds from data/embed-restore.json when that file exists (does nothing otherwise).
+  try { require('../lib/embedRestore').restore(); } catch (err) { console.warn('[embed restore]', err.message); }
   const guildId = process.env.GUILD_ID;
   if (!ce.byName('verification')) {
     ce.create('verification', verification(guildId));
