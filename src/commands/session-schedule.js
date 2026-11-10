@@ -1,8 +1,8 @@
 const { SlashCommandBuilder, MessageFlags } = require('discord.js');
 const { guard } = require('../lib/permissions');
 const { brand, forEdit, ts } = require('../lib/embeds');
-const { sessionCard, sessionButtons } = require('../lib/sessionUi');
-const { withPing } = require('../lib/pings');
+const { sessionCard, sessionButtons, buildSchedulePost } = require('../lib/sessionUi');
+const { rolesFor } = require('../lib/pings');
 const { postToSessions } = require('../lib/sessionPost');
 const { parseWhen, zone } = require('../lib/time');
 const { run, get, all, now } = require('../lib/db');
@@ -18,7 +18,8 @@ const data = new SlashCommandBuilder()
   .addSubcommand((s) => s.setName('cancel').setDescription('Cancel a scheduled session.')
     .addIntegerOption((o) => o.setName('id').setDescription('Schedule number from /session-schedule list').setRequired(true)));
 
-function scheduleMessage(guild, s) {
+// Announcements posted before the card look are embeds and keep the old rendering when edited.
+function legacyScheduleMessage(guild, s) {
   const { top, main, files } = sessionCard();
   const cancelled = s.status === 'cancelled';
   main.setTitle(cancelled ? '📅 Session Cancelled' : '📅 Session Scheduled')
@@ -58,7 +59,12 @@ async function execute(interaction) {
     if (s.channel_id && s.message_id) {
       const ch = await interaction.client.channels.fetch(s.channel_id).catch(() => null);
       const msg = await ch?.messages.fetch(s.message_id).catch(() => null);
-      await msg?.edit(forEdit(scheduleMessage(interaction.guild, { ...s, status: 'cancelled' }))).catch(() => {});
+      if (msg) {
+        const cancelled = msg.flags.has(MessageFlags.IsComponentsV2)
+          ? { ...forEdit(buildSchedulePost({ id: s.id, cancelled: true })), allowedMentions: { parse: [] } }
+          : forEdit(legacyScheduleMessage(interaction.guild, { ...s, status: 'cancelled' }));
+        await msg.edit(cancelled).catch(() => {});
+      }
     }
     return interaction.reply({ content: `🗑️ Scheduled session #${id} cancelled.`, flags: MessageFlags.Ephemeral });
   }
@@ -72,7 +78,9 @@ async function execute(interaction) {
   const { lastInsertRowid } = run('INSERT INTO scheduled_sessions(host_id, scheduled_for, created_at, note) VALUES(?, ?, ?, ?)', host.id, when, now(), note);
   const s = get('SELECT * FROM scheduled_sessions WHERE id = ?', Number(lastInsertRowid));
 
-  const msg = await postToSessions(interaction, withPing(scheduleMessage(interaction.guild, s), 'session_schedule'));
+  const msg = await postToSessions(interaction, buildSchedulePost({
+    id: s.id, when: s.scheduled_for, host: s.host_id, note: s.note, pingRoles: rolesFor('session_schedule'),
+  }));
   if (!msg) {
     run('DELETE FROM scheduled_sessions WHERE id = ?', s.id);
     return;

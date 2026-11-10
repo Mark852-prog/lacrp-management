@@ -173,6 +173,78 @@ function buildLowActivityPost({ pingRoles = [], serverInfo, code } = {}) {
 }
 
 // ---------------------------------------------------------------------------------------
+// Poll. options: [{ label, count }]. Button ids are poll:<index>, poll:close and poll:voters.
+// ---------------------------------------------------------------------------------------
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function buildPollPost({ question, options = [], createdBy, closed = false, pingRoles = [] } = {}) {
+  const total = options.reduce((a, o) => a + o.count, 0);
+  const top = Math.max(0, ...options.map((o) => o.count));
+  const leaders = options.filter((o) => top > 0 && o.count === top).map((o) => o.label);
+
+  const lines = options.map((o) => {
+    const pct = total ? Math.round((o.count / total) * 100) : 0;
+    const lead = !closed && top > 0 && o.count === top ? '  (leading)' : '';
+    return `**${o.label}**  ${plural(o.count, 'vote')} · ${pct}%${lead}`;
+  });
+
+  const optionRow = new ActionRowBuilder().addComponents(
+    ...options.map((o, i) => new ButtonBuilder().setCustomId(`poll:${i}`).setLabel(`${o.label.slice(0, 60)} (${o.count})`)
+      .setStyle(ButtonStyle.Secondary).setDisabled(closed)),
+    new ButtonBuilder().setCustomId('poll:close').setLabel('Close').setStyle(ButtonStyle.Danger).setDisabled(closed),
+  );
+  const votersRow = new ActionRowBuilder().addComponents(secondary('poll:voters', 'Voters'));
+
+  return payload(card([
+    `${pingLine(pingRoles)}**${question}**\n\n` + (closed
+      ? (leaders.length ? `Final result: **${leaders.join(' / ')}** wins with ${plural(top, 'vote')}.` : 'The poll closed with no votes.')
+      : 'Vote with the buttons below. One vote each; tap again to change or remove it.'),
+    `${lines.join('\n')}\n\n**${plural(total, 'total vote')}** · started by <@${createdBy}>`,
+    optionRow,
+    votersRow,
+  ]), pingRoles);
+}
+
+// ---------------------------------------------------------------------------------------
+// Scheduled session announcement (and its cancelled state).
+// ---------------------------------------------------------------------------------------
+function buildSchedulePost({ id, when, host, note, cancelled = false, pingRoles = [] } = {}) {
+  if (cancelled) {
+    return payload(card([
+      `The scheduled **${serverName()}** session has been **cancelled**. Keep an eye on this channel for the next one.`,
+    ]), []);
+  }
+  return payload(card([
+    `${pingLine(pingRoles)}A **${serverName()}** session has been **scheduled**. Mark your calendar, and press **Get Session Notification!** to be pinged when it goes live.${quote(note)}`,
+    `**When**  <t:${Math.floor(when)}:F> (<t:${Math.floor(when)}:R>)\n**Host**  <@${host}>\n**Schedule #**  ${id}`,
+    new ActionRowBuilder().addComponents(secondary(SESSION_PINGS_BUTTON_ID, 'Get Session Notification!')),
+  ]), pingRoles);
+}
+
+// ---------------------------------------------------------------------------------------
+// Server almost full / full alert (sent by the poller).
+// ---------------------------------------------------------------------------------------
+function buildHighActivityPost({ pingRoles = [], serverInfo, code, full = false, queue = 0 } = {}) {
+  const row = new ActionRowBuilder();
+  const j = joinButton(code);
+  if (j) row.addComponents(j);
+  row.addComponents(secondary(SESSION_PINGS_BUTTON_ID, 'Get Session Notification!'));
+
+  const stats = [];
+  if (serverInfo) stats.push(`**Players**  ${players(serverInfo)}`);
+  stats.push(`**Queue**  ${queue}`);
+  if (code) stats.push(`**Join code**  \`${code}\``);
+
+  return payload(card([
+    `${pingLine(pingRoles)}` + (full
+      ? `The **${serverName()}** session is **full**. All slots are taken${queue ? ` and **${queue}** ${queue === 1 ? 'is' : 'are'} waiting in the queue` : ''}, so join the queue now to grab the next open spot.`
+      : `The **${serverName()}** session is **almost full**. Only a few slots are left, so join before they're gone.`),
+    stats.join('\n'),
+    row,
+  ]), pingRoles);
+}
+
+// ---------------------------------------------------------------------------------------
 // "View Voters" ephemeral reply. yesIds / noIds are Discord user ids. Field values are capped
 // under Discord's 1024-character limit; long lists end with "+N more".
 // ---------------------------------------------------------------------------------------
@@ -219,6 +291,7 @@ function sessionCard() {
 }
 
 module.exports = {
-  buildVotePost, buildStartPost, buildEndedPost, buildLowActivityPost, buildVotersReply,
+  buildVotePost, buildStartPost, buildEndedPost, buildLowActivityPost, buildPollPost, buildSchedulePost,
+  buildHighActivityPost, buildVotersReply,
   sessionCard, sessionButtons, joinUrl, bar, players,
 };
