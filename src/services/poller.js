@@ -13,6 +13,7 @@ const { robloxToDiscord, UNKNOWN } = require('../lib/bloxlink');
 const announcements = require('../lib/announcements');
 const panels = require('./panels');
 const inGameRole = require('./inGameRole');
+const discordCheck = require('./discordCheck');
 
 const FLAGS = ['Players', 'Queue', 'JoinLogs', 'CommandLogs', 'ModCalls'];
 const bootTs = now();
@@ -31,6 +32,7 @@ function start(discordClient) {
       if (lastServerPayload) {
         panels.onServerData(lastServerPayload);
         inGameRole.update(lastServerPayload).catch((e) => console.warn('[in-game role]', e.message));
+        discordCheck.update(client, lastServerPayload).catch((e) => console.warn('[discord check]', e.message));
       }
       if (lastError) console.log('[poller] recovered');
       lastError = null;
