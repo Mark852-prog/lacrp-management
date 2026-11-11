@@ -60,13 +60,31 @@ const imageKey = (v) => (v && imagePath(v) && fs.existsSync(imagePath(v)) ? v : 
 const cleanUrl = (u) => (/^(https?|discord):\/\/\S+$/i.test(String(u ?? '').trim()) ? String(u).trim().slice(0, 512) : '');
 const cleanLink = (l = {}) => ({ label: str(l.label, 80) || 'Open', emoji: str(l.emoji, 64), url: cleanUrl(l.url) });
 
+// ---------- handbooks ----------
+// PDFs in data/handbooks are attached fresh on every click, so they never expire like Discord CDN links.
+// Any link/button pointing at an old cdn.discordapp.com/attachments/.../<Name>.pdf is matched by file
+// name (version suffixes like _1_1 ignored) and served from that folder instead.
+const HANDBOOKS = path.join(__dirname, '..', '..', 'data', 'handbooks');
+const hbBase = (n) => String(n).replace(/\.pdf$/i, '').replace(/(_v?\d+)+$/i, '').toLowerCase();
+function handbookFor(url) {
+  const m = /\/attachments\/\d+\/\d+\/([^/?#]+\.pdf)(?:[?#]|$)/i.exec(String(url ?? ''));
+  if (!m) return null;
+  let files = [];
+  try { files = fs.readdirSync(HANDBOOKS).filter((f) => /\.pdf$/i.test(f)); } catch { return null; }
+  return files.find((f) => hbBase(f) === hbBase(decodeURIComponent(m[1]))) ?? null;
+}
+
 function cleanReply(r = {}) {
+  const raw = (Array.isArray(r.links) ? r.links : []).map(cleanLink).filter((l) => l.url);
+  const hb = raw.map((l) => ({ l, f: handbookFor(l.url) }));
+  const file = typeof r.file === 'string' && /^[\w.\- ]+\.pdf$/i.test(r.file) && fs.existsSync(path.join(HANDBOOKS, r.file)) ? r.file : (hb.find((x) => x.f)?.f ?? null);
   return {
+    file,
     title: str(r.title, 256),
     text: str(r.text, 4000),
     image: imageKey(r.image),
     footer: str(r.footer, 2048),
-    links: (Array.isArray(r.links) ? r.links : []).map(cleanLink).filter((l) => l.url).slice(0, 5),
+    links: hb.filter((x) => !x.f).map((x) => x.l).slice(0, 5),
   };
 }
 
@@ -92,6 +110,8 @@ function sanitize(d = {}) {
     // action 'link' opens a URL / Discord channel; 'reply' shows a hidden message.
     buttons: (Array.isArray(d.buttons) ? d.buttons : []).slice(0, 10).map((b) => {
       const url = cleanUrl(b.url);
+      const hbFile = b.action === 'link' ? handbookFor(url) : null;
+      if (hbFile) return { label: str(b.label, 80) || 'Button', emoji: str(b.emoji, 64), style: 'secondary', action: 'reply', url: '', reply: { ...cleanReply(b.reply), title: str(b.label, 80), text: 'Your copy of the handbook is attached below.', file: hbFile } };
       return {
         label: str(b.label, 80) || 'Button', emoji: str(b.emoji, 64), style: STYLES[b.style] ? b.style : 'secondary',
         action: b.action === 'link' && url ? 'link' : 'reply', url, reply: cleanReply(b.reply),
@@ -229,6 +249,8 @@ function replyPayload(d, reply, opts = {}) {
       embed.setImage(`attachment://${name}`);
     }
   }
+  if (reply.file && fs.existsSync(path.join(HANDBOOKS, reply.file))) files.push(new AttachmentBuilder(path.join(HANDBOOKS, reply.file), { name: reply.file }));
+  if (reply.file && !reply.text) embed.setDescription('Your copy is attached below.');
   if (!reply.title && !reply.text && !files.length) embed.setDescription('*(Nothing here yet.)*');
   const components = [];
   if (opts.selected != null && d.menu) components.push(menuRow(opts.id, d, opts.selected));
