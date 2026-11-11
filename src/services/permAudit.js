@@ -2,6 +2,13 @@
 // Triggered by a job file, data/perm-job.json, checked on startup:
 //   { "action": "audit" }  - write the report only
 //   { "action": "perks" }  - backup, apply the chat-perk setup, verify, then write the report
+// Add "dryRun": true to any job to PREVIEW it: perm-result.txt lists what would change and nothing
+// is changed on Discord.
+// Extra rules go in "ops" (see the functions below):
+//   ops.uploads  - channels/categories where everyone may upload files
+//   ops.commands - only the listed channels allow slash commands (public channels get a deny)
+//   ops.mentions - only Supervisor+ may ping roles/@everyone, and no role is pingable by others
+//   ops.roles / ops.overwrites / ops.threads - explicit changes (applyOps)
 // Output (in data/): perm-backup-<time>.json (everything needed to undo), perm-report.txt (readable
 // summary, names only) and perm-result.txt (what was changed and whether each change took effect).
 // Never touched: managed (bot/integration) roles, Administrator roles, roles at or above the bot's
@@ -9,6 +16,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { PermissionFlagsBits: P, PermissionsBitField, ChannelType } = require('discord.js');
+const { role: slotRole } = require('../lib/guildConfig');
 
 const DATA = path.join(__dirname, '..', '..', 'data');
 const JOB = path.join(DATA, 'perm-job.json');
@@ -17,12 +25,14 @@ const out = (name, text) => fs.writeFileSync(path.join(DATA, name), text);
 const PERKS = { AttachFiles: P.AttachFiles, EmbedLinks: P.EmbedLinks, UseExternalEmojis: P.UseExternalEmojis, UseExternalStickers: P.UseExternalStickers };
 const PERK_NAMES = { AttachFiles: 'Attach Files', EmbedLinks: 'Embed Links (GIFs)', UseExternalEmojis: 'External Emojis', UseExternalStickers: 'External Stickers' };
 // What each tier should have at server level (everything else of the four is removed).
+// Premium: external emojis. VIP: files + GIFs + external emojis. Executive: everything.
 const TIERS = {
   communitymember: [],
-  premium: ['AttachFiles'],
-  vip: ['AttachFiles', 'UseExternalEmojis'],
+  premium: ['UseExternalEmojis'],
+  vip: ['AttachFiles', 'EmbedLinks', 'UseExternalEmojis'],
   executive: ['AttachFiles', 'EmbedLinks', 'UseExternalEmojis', 'UseExternalStickers'],
 };
+const SLOT_TIERS = new Set(['premium', 'vip', 'executive']); // found through /setup roles, not by name
 const RISKY = {
   Administrator: P.Administrator, BanMembers: P.BanMembers, KickMembers: P.KickMembers, ManageRoles: P.ManageRoles,
   ManageChannels: P.ManageChannels, ManageWebhooks: P.ManageWebhooks, MentionEveryone: P.MentionEveryone,
@@ -54,6 +64,9 @@ function tierRoles(guild, plan) {
   const found = {};
   const problems = [];
   for (const tier of Object.keys(plan)) {
+    // premium / vip / executive come from /setup roles, so the real role names don't matter.
+    const bySlot = SLOT_TIERS.has(tier) ? guild.roles.cache.get(slotRole(tier)) : null;
+    if (bySlot) { found[tier] = bySlot; continue; }
     const matches = guild.roles.cache.filter((r) => norm(r.name) === norm(tier));
     if (matches.size === 1) found[tier] = matches.first();
     else problems.push(matches.size ? `${tier}: ${matches.size} roles share this name - skipped` : `${tier}: no role with this name found`);
@@ -118,21 +131,28 @@ function report(guild) {
 }
 
 // ---------------------------------------------------------------- part A: chat perks
-async function applyPerks(guild, plan = TIERS) {
+// dry: only work out and list the changes. keep: channel ids where an @everyone Attach Files allow
+// is wanted (the upload whitelist), so it isn't stripped here.
+async function applyPerks(guild, plan = TIERS, { dry = false, keep = new Set() } = {}) {
   const { untouchable } = guardInfo(guild);
   const { found, problems } = tierRoles(guild, plan);
   const everyone = guild.roles.everyone;
   const done = [];
   const skipped = [...problems];
   const perkMask = Object.values(PERKS).reduce((a, b) => a | b, 0n);
+  const tierIds = new Set(Object.values(found).map((r) => r.id));
+  const would = dry ? 'WOULD CHANGE: ' : '';
 
   // Other roles that only had images through @everyone lose them now - list them for the owner.
   if (has(everyone.permissions.bitfield, P.AttachFiles)) {
-    const tierIds = new Set(Object.values(found).map((r) => r.id));
     const losing = guild.roles.cache.filter((r) => r.id !== everyone.id && !tierIds.has(r.id) && !r.managed
       && !r.permissions.has(P.Administrator) && !r.permissions.has(P.AttachFiles) && r.members.size > 0);
     if (losing.size) skipped.push(`These roles have no Attach Files of their own, so members with only these roles can no longer send images: ${losing.map((r) => clean(r.name)).join(', ')}`);
   }
+  // Roles with chat perks of their own keep them everywhere - only the owner can decide about those.
+  const keepers = guild.roles.cache.filter((r) => r.id !== everyone.id && !tierIds.has(r.id) && !r.managed
+    && !r.permissions.has(P.Administrator) && r.members.size > 0 && (r.permissions.bitfield & perkMask) !== 0n);
+  if (keepers.size) skipped.push(`These roles have chat perks of their own, so their members keep them everywhere (not changed): ${keepers.map((r) => `${clean(r.name)} (${perkList(r.permissions.bitfield).join(' / ')})`).join(', ')}`);
 
   // 1) Server-level role permissions. @everyone gets the Community Member tier (no perks).
   const targets = [[everyone, TIERS.communitymember], ...Object.entries(found).map(([t, r]) => [r, plan[t]])];
@@ -143,8 +163,8 @@ async function applyPerks(guild, plan = TIERS) {
     const before = role.permissions.bitfield;
     const after = (before & ~perkMask) | wantBits;
     if (after === before) { done.push({ what: `${label(role)} server perks already correct (${perkList(before).join(', ') || 'none'})`, check: null }); continue; }
-    await role.setPermissions(after, 'Chat perk setup (approved by server owner)');
-    done.push({ what: `${label(role)} server perks: ${perkList(before).join(', ') || 'none'}  ->  ${perkList(after).join(', ') || 'none'}`, check: { kind: 'role', id: role.id, bits: after.toString() } });
+    if (!dry) await role.setPermissions(after, 'Chat perk setup (approved by server owner)');
+    done.push({ what: `${would}${label(role)} server perks: ${perkList(before).join(', ') || 'none'}  ->  ${perkList(after).join(', ') || 'none'}`, check: dry ? null : { kind: 'role', id: role.id, bits: after.toString() } });
   }
 
   // 2) Channel overwrites that hand a perk to a tier that shouldn't have it (e.g. green Attach Files for
@@ -155,15 +175,16 @@ async function applyPerks(guild, plan = TIERS) {
     for (const o of c.permissionOverwrites.cache.values()) {
       const tier = tierFor.get(o.id);
       if (!tier) continue;
-      const extra = Object.entries(PERKS).filter(([k, f]) => has(o.allow.bitfield, f) && !(tier === "@everyone" ? TIERS.communitymember : plan[tier]).includes(k));
+      let extra = Object.entries(PERKS).filter(([k, f]) => has(o.allow.bitfield, f) && !(tier === "@everyone" ? TIERS.communitymember : plan[tier]).includes(k));
+      if (keep.has(c.id)) extra = extra.filter(([k]) => k !== 'AttachFiles'); // upload-whitelisted channel
       if (!extra.length) continue;
       const names = extra.map(([k]) => PERK_NAMES[k]).join(', ');
       const who = o.id === everyone.id ? '@everyone' : clean(guild.roles.cache.get(o.id).name);
       if (MEDIA_NAME.test(c.name)) { skipped.push(`#${clean(c.name)}: ${who} is allowed ${names} - looks like a media channel, left as is`); continue; }
       const edit = Object.fromEntries(extra.map(([k]) => [k, null]));
-      await c.permissionOverwrites.edit(o.id, edit, { reason: 'Chat perk setup (approved by server owner)' });
+      if (!dry) await c.permissionOverwrites.edit(o.id, edit, { reason: 'Chat perk setup (approved by server owner)' });
       const allowAfter = o.allow.bitfield & ~extra.reduce((a, [, f]) => a | f, 0n);
-      done.push({ what: `#${clean(c.name)}: removed the green ${names} for ${who} (now neutral)`, check: { kind: 'overwrite', channel: c.id, id: o.id, notAllowed: extra.map(([k]) => k), allowAfter: allowAfter.toString() } });
+      done.push({ what: `${would}#${clean(c.name)}: removed the green ${names} for ${who} (now neutral)`, check: dry ? null : { kind: 'overwrite', channel: c.id, id: o.id, notAllowed: extra.map(([k]) => k), allowAfter: allowAfter.toString() } });
     }
   }
   return { done, skipped };
@@ -280,6 +301,170 @@ async function applyOps(guild, ops) {
   return lines;
 }
 
+// ---------------------------------------------------------------- upload / commands / ping rules
+const listNames = (items, max = 40) => {
+  const names = [...items].map((c) => `#${clean(c.name)}`);
+  return names.slice(0, max).join(', ') + (names.length > max ? ` +${names.length - max} more` : '');
+};
+
+// Sets one role's overwrite on a channel (true = green, false = red, null = neutral), only when
+// something differs. Returns true when a change was (or, in a preview, would be) made.
+async function ensureOverwrite(c, targetId, set, dry, reason, checks) {
+  const o = c.permissionOverwrites.cache.get(targetId);
+  const state = (k) => (o && has(o.allow.bitfield, P[k]) ? true : o && has(o.deny.bitfield, P[k]) ? false : null);
+  if (Object.entries(set).every(([k, v]) => state(k) === v)) return false;
+  if (!dry) {
+    await c.permissionOverwrites.edit(targetId, set, { reason });
+    checks.push({ channel: c.id, target: targetId, set });
+  }
+  return true;
+}
+
+// After a forced re-fetch: the checks whose overwrite doesn't read back as intended.
+function failedOverwrites(guild, checks) {
+  return checks.filter(({ channel, target, set }) => {
+    const o = guild.channels.cache.get(channel)?.permissionOverwrites.cache.get(target);
+    return !Object.entries(set).every(([k, v]) => {
+      const a = Boolean(o) && has(o.allow.bitfield, P[k]);
+      const d = Boolean(o) && has(o.deny.bitfield, P[k]);
+      return v === true ? a : v === false ? d : !a && !d;
+    });
+  });
+}
+
+// Channels/categories matched by name (letters only, case and emojis ignored). Every match counts:
+// "announcements" covers each channel with that name. A category covers all channels inside it.
+function uploadTargets(guild, cfg = {}) {
+  const lines = [];
+  const targets = new Map();
+  const isCat = (c) => c.type === ChannelType.GuildCategory;
+  for (const name of cfg.channels ?? []) {
+    const m = guild.channels.cache.filter((c) => !isCat(c) && norm(name) && norm(c.name) === norm(name));
+    if (!m.size) lines.push(`NOT FOUND: channel "${name}"`);
+    for (const c of m.values()) targets.set(c.id, c);
+  }
+  const cats = new Map();
+  for (const name of cfg.categories ?? []) {
+    const m = guild.channels.cache.filter((c) => isCat(c) && norm(name) && norm(c.name) === norm(name));
+    if (!m.size) lines.push(`NOT FOUND: category "${name}"`);
+    for (const c of m.values()) cats.set(c.id, c);
+  }
+  for (const part of cfg.categoryContains ?? []) {
+    const m = guild.channels.cache.filter((c) => isCat(c) && norm(part) && norm(c.name).includes(norm(part)));
+    if (!m.size) lines.push(`NOT FOUND: any category with "${part}" in its name`);
+    for (const c of m.values()) cats.set(c.id, c);
+  }
+  for (const cat of cats.values()) {
+    targets.set(cat.id, cat);
+    for (const c of guild.channels.cache.filter((ch) => ch.parentId === cat.id).values()) targets.set(c.id, c);
+  }
+  return { targets, categories: cats, lines };
+}
+
+// ops.uploads: { channels: [names], categories: [names], categoryContains: [text] }
+// Everyone may upload files in these channels (Attach Files green for @everyone).
+async function applyUploads(guild, cfg, dry, checks) {
+  const { targets, lines } = uploadTargets(guild, cfg);
+  let changed = 0;
+  for (const c of targets.values()) {
+    if (await ensureOverwrite(c, guild.roles.everyone.id, { AttachFiles: true }, dry, 'Upload whitelist (approved by server owner)', checks)) changed += 1;
+  }
+  lines.push(`${dry ? 'WOULD ALLOW' : 'ALLOWED'} file uploads for everyone in ${targets.size} channels/categories (${changed} to change, ${targets.size - changed} already set): ${listNames(targets.values())}`);
+  return lines;
+}
+
+// ops.commands: { allowChannels: [names], publicOnly: true }
+// Slash commands are denied for @everyone in every public channel except the allowed ones, where they
+// are explicitly allowed. publicOnly (default) leaves channels @everyone can't see (staff areas,
+// tickets) alone so staff can still use commands there. Administrator roles always bypass overwrites.
+async function applyCommands(guild, cfg, dry, checks) {
+  const everyone = guild.roles.everyone;
+  const lines = [];
+  const allowed = new Map();
+  for (const name of cfg.allowChannels ?? []) {
+    const m = guild.channels.cache.filter((c) => c.type !== ChannelType.GuildCategory && norm(name) && norm(c.name) === norm(name));
+    if (!m.size) lines.push(`NOT FOUND: commands channel "${name}"`);
+    for (const c of m.values()) allowed.set(c.id, c);
+  }
+  if (!allowed.size) return [...lines, 'SKIPPED commands rule: no commands channel found, so nothing was changed (it would block commands everywhere)'];
+  const denied = [];
+  let privateSkipped = 0;
+  let changed = 0;
+  for (const c of guild.channels.cache.filter((ch) => CHAT_TYPES.includes(ch.type)).values()) {
+    if (allowed.has(c.id)) {
+      if (await ensureOverwrite(c, everyone.id, { UseApplicationCommands: true }, dry, 'Commands only in the commands channel (approved by server owner)', checks)) changed += 1;
+      continue;
+    }
+    if (cfg.publicOnly !== false && !c.permissionsFor(everyone)?.has(P.ViewChannel)) { privateSkipped += 1; continue; }
+    denied.push(c);
+    if (await ensureOverwrite(c, everyone.id, { UseApplicationCommands: false }, dry, 'Commands only in the commands channel (approved by server owner)', checks)) changed += 1;
+  }
+  lines.push(`${dry ? 'WOULD ALLOW' : 'ALLOWED'} commands in: ${listNames(allowed.values())}`);
+  lines.push(`${dry ? 'WOULD BLOCK' : 'BLOCKED'} commands for @everyone in ${denied.length} public channels: ${listNames(denied)}`);
+  lines.push(`${changed} overwrite(s) ${dry ? 'to change' : 'changed'}; ${privateSkipped} private channels (staff areas, tickets) left alone`);
+  return lines;
+}
+
+// ops.mentions: { aboveRole: "supervisor" }   (a /setup roles slot name or a role name)
+// Only that role and the roles above it keep Mention Everyone (= ping roles, @everyone and @here);
+// everyone below loses it, no role stays "mentionable" by anyone, and channel-level Mention Everyone
+// allows for @everyone / lower roles are cleared. The bot's own role needs Mention Everyone to ping
+// the Session Pings role (a managed role, so it's only checked here).
+async function applyMentions(guild, cfg, dry) {
+  const lines = [];
+  const everyone = guild.roles.everyone;
+  const { top } = guardInfo(guild);
+  const spec = cfg.aboveRole ?? 'supervisor';
+  const bySlot = guild.roles.cache.get(slotRole(spec));
+  const byName = guild.roles.cache.filter((r) => norm(r.name) === norm(spec));
+  const threshold = bySlot ?? (byName.size === 1 ? byName.first() : null);
+  if (!threshold) return [`SKIPPED ping rule: couldn't find the "${spec}" role (set it with /setup roles supervisor)`];
+  const touchable = (r) => !r.managed && r.position < top && !r.permissions.has(P.Administrator);
+  lines.push(`Ping rule: Supervisor+ means "${clean(threshold.name)}" and every role above it (position ${threshold.position} and up)`);
+
+  const lose = [everyone, ...guild.roles.cache.filter((r) => r.id !== everyone.id && r.position < threshold.position && touchable(r)).values()]
+    .filter((r) => has(r.permissions.bitfield, P.MentionEveryone));
+  for (const r of lose) if (!dry) await r.setPermissions(r.permissions.bitfield & ~P.MentionEveryone, 'Only Supervisor+ may ping (approved by server owner)');
+  lines.push(`${dry ? 'WOULD REMOVE' : 'REMOVED'} Mention Everyone from ${lose.length} role(s): ${lose.map((r) => (r.id === everyone.id ? '@everyone' : clean(r.name))).join(', ') || 'none'}`);
+
+  if (touchable(threshold) && !has(threshold.permissions.bitfield, P.MentionEveryone)) {
+    if (!dry) await threshold.setPermissions(threshold.permissions.bitfield | P.MentionEveryone, 'Only Supervisor+ may ping (approved by server owner)');
+    lines.push(`${dry ? 'WOULD GIVE' : 'GAVE'} Mention Everyone to ${clean(threshold.name)}`);
+  }
+  const lacking = guild.roles.cache.filter((r) => r.position > threshold.position && !r.managed && !r.permissions.has(P.Administrator) && !has(r.permissions.bitfield, P.MentionEveryone));
+  if (lacking.size) lines.push(`NOTE: these roles above ${clean(threshold.name)} can NOT ping (no Mention Everyone, not Administrator): ${lacking.map((r) => clean(r.name)).join(', ')}`);
+
+  const pingable = guild.roles.cache.filter((r) => r.id !== everyone.id && r.mentionable && !r.managed && r.position < top);
+  for (const r of pingable.values()) if (!dry) await r.setMentionable(false, 'Only Supervisor+ may ping (approved by server owner)');
+  lines.push(`${dry ? 'WOULD MAKE' : 'MADE'} ${pingable.size} role(s) not mentionable by regular members: ${pingable.map((r) => clean(r.name)).join(', ') || 'none'}`);
+
+  const checks = [];
+  const belowIds = new Set([everyone.id, ...guild.roles.cache.filter((r) => r.position < threshold.position).keys()]);
+  let cleared = 0;
+  for (const c of guild.channels.cache.values()) {
+    for (const o of c.permissionOverwrites?.cache.values() ?? []) {
+      if (!belowIds.has(o.id) || !has(o.allow.bitfield, P.MentionEveryone)) continue;
+      if (await ensureOverwrite(c, o.id, { MentionEveryone: null }, dry, 'Only Supervisor+ may ping (approved by server owner)', checks)) cleared += 1;
+    }
+  }
+  lines.push(`${dry ? 'WOULD CLEAR' : 'CLEARED'} ${cleared} channel overwrite(s) that allowed pinging for lower roles`);
+
+  if (!guild.members.me.permissions.has(P.MentionEveryone) && !guild.members.me.permissions.has(P.Administrator)) {
+    lines.push('WARNING: the LACRP Management bot role does NOT have Mention Everyone. Tick it in Server Settings > Roles, or the Session Pings role can no longer be pinged by the bot.');
+  }
+  if (!dry) {
+    await guild.roles.fetch(undefined, { force: true });
+    await guild.channels.fetch(undefined, { force: true });
+    const stillRole = guild.roles.cache.filter((r) => (r.id === everyone.id || (r.position < threshold.position && touchable(r))) && has(r.permissions.bitfield, P.MentionEveryone));
+    const stillMentionable = guild.roles.cache.filter((r) => r.id !== everyone.id && r.mentionable && !r.managed && r.position < top);
+    const bad = failedOverwrites(guild, checks);
+    lines.push(stillRole.size || stillMentionable.size || bad.length
+      ? `FAILED ping rule check - still pingable: ${[...stillRole.values(), ...stillMentionable.values()].map((r) => clean(r.name)).join(', ') || 'none'}; ${bad.length} channel overwrite(s) not applied`
+      : 'OK  ping rule re-read from Discord: lower roles can no longer ping and no role is mentionable');
+  }
+  return lines;
+}
+
 // ---------------------------------------------------------------- job runner (startup)
 async function runJob(client) {
   if (!fs.existsSync(JOB)) return;
@@ -290,15 +475,41 @@ async function runJob(client) {
   await guild.roles.fetch();
   await guild.channels.fetch();
   await guild.members.fetch(); // member counts per role
-  console.log(`[perm audit] running "${job.action}"`);
+  const dry = job.dryRun === true;
+  console.log(`[perm audit] running "${job.action}"${dry ? ' (preview only)' : ''}`);
   const file = backup(guild);
-  const lines = [`Backup saved: data/${file}`];
+  const lines = [];
+  if (dry) lines.push('*** PREVIEW ONLY: nothing was changed on Discord. Remove "dryRun" from the job to apply. ***', '');
+  lines.push(`Backup saved: data/${file}`);
+  const ops = job.ops ?? {};
   if (job.action === 'perks') {
-    const { done, skipped } = await applyPerks(guild, job.roles ?? TIERS);
-    const checked = await verify(guild, done);
-    lines.push('', '=== CHANGES (re-read from Discord afterwards) ===', ...checked, '', '=== SKIPPED / NOTES ===', ...(skipped.length ? skipped : ['none']));
+    // The upload whitelist's @everyone Attach Files allows must survive the perk clean-up.
+    const keep = new Set(ops.uploads ? uploadTargets(guild, ops.uploads).targets.keys() : []);
+    const { done, skipped } = await applyPerks(guild, job.roles ?? TIERS, { dry, keep });
+    const checked = dry ? done.map((d) => d.what) : await verify(guild, done);
+    lines.push('', dry ? '=== CHANGES THAT WOULD BE MADE ===' : '=== CHANGES (re-read from Discord afterwards) ===', ...(checked.length ? checked : ['none']), '', '=== SKIPPED / NOTES ===', ...(skipped.length ? skipped : ['none']));
   }
-  if (job.ops) lines.push('', '=== EXPLICIT CHANGES (each re-read from Discord) ===', ...(await applyOps(guild, job.ops)));
+  const rules = [['uploads', 'FILE UPLOAD WHITELIST', applyUploads], ['commands', 'COMMANDS ONLY IN THE COMMANDS CHANNEL', applyCommands], ['mentions', 'PINGS (SUPERVISOR+ ONLY)', applyMentions]];
+  const checks = [];
+  for (const [key, title, fn] of rules) {
+    if (!ops[key]) continue;
+    lines.push('', `=== ${title} ===`);
+    try {
+      lines.push(...(await fn(guild, ops[key], dry, checks)));
+    } catch (err) {
+      lines.push(`FAILED: ${err.message}${err.code === 50013 ? ' (the bot role needs Manage Roles and must sit above the roles it changes)' : ''}`);
+    }
+  }
+  if (checks.length) {
+    await guild.channels.fetch(undefined, { force: true });
+    const bad = failedOverwrites(guild, checks);
+    lines.push('', bad.length
+      ? `FAILED: ${bad.length} of ${checks.length} channel overwrite(s) did not read back as intended: ${bad.slice(0, 10).map((b) => `#${clean(guild.channels.cache.get(b.channel)?.name ?? b.channel)}`).join(', ')}`
+      : `OK  all ${checks.length} channel overwrite(s) re-read from Discord and confirmed`);
+  }
+  if (ops.roles || ops.overwrites || ops.threads) {
+    lines.push('', '=== EXPLICIT CHANGES (each re-read from Discord) ===', ...(dry ? ['(not previewed - these only run when the job is applied)'] : await applyOps(guild, ops)));
+  }
   out('perm-result.txt', lines.join('\n'));
   // Role colours (used to design matching role icons). null = no colour set.
   out('role-colors.json', JSON.stringify(guild.roles.cache
@@ -309,4 +520,4 @@ async function runJob(client) {
   console.log(`[perm audit] done - see data/perm-report.txt and data/perm-result.txt`);
 }
 
-module.exports = { runJob, report, backup, applyPerks, verify };
+module.exports = { runJob, report, backup, applyPerks, verify, applyUploads, applyCommands, applyMentions, uploadTargets, TIERS };

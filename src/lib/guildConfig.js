@@ -14,6 +14,7 @@ const ROLE_SLOTS = {
   premium: 'Premium members (allowed restricted vehicles/liveries)',
   vip: 'VIP members (allowed restricted vehicles/liveries)',
   booster: 'Server Booster (booster perk: allowed restricted vehicles/liveries)',
+  executive: 'Executive Membership (chat perks: external emojis/stickers, files, GIFs)',
   verified: 'Bloxlink verified role (getting it triggers the Roblox-username nickname)',
   in_game: 'In-Game (given while someone is in the ER:LC server)',
 };
