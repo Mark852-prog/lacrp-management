@@ -33,6 +33,21 @@ async function inGuild(guild, discordId) {
   return Boolean(member);
 }
 
+// Second opinion that doesn't rely on Bloxlink: verified members are nicknamed with their exact Roblox
+// username, so anyone in the Discord whose nickname / display name / username contains the player's
+// name (as a whole word) counts as "in the server". Prevents PMs to members Bloxlink can't match.
+let lastFullFetch = 0;
+async function refreshMembers(guild) {
+  if (Date.now() - lastFullFetch < 10 * 60_000) return;
+  lastFullFetch = Date.now();
+  await guild.members.fetch().catch((err) => console.warn('[discord check] member list refresh failed:', err.message));
+}
+const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function nameInGuild(guild, name) {
+  const re = new RegExp(`(^|[^A-Za-z0-9_])${esc(name)}($|[^A-Za-z0-9_])`, 'i');
+  return guild.members.cache.some((m) => !m.user?.bot && [m.nickname, m.displayName, m.user?.username, m.user?.globalName].some((n) => n && re.test(n)));
+}
+
 async function update(client, server) {
   const cfg = config.settings.discordCheckPm ?? {};
   if (cfg.enabled === false || busy || Date.now() - lastRun < CHECK_EVERY_MS) return;
@@ -42,6 +57,7 @@ async function update(client, server) {
   lastRun = Date.now();
   if (!announced) { announced = true; console.log('[discord check] running: players not in the Discord get an in-game PM (checked every minute)'); }
   try {
+    await refreshMembers(guild);
     const repeatMs = Math.max(1, Number(cfg.repeatMinutes) || 10) * 60_000;
     const players = (server.Players ?? []).map((p) => erlc.parsePlayer(p.Player)).filter((p) => p.id && p.name);
 
@@ -56,6 +72,7 @@ async function update(client, server) {
       if (Date.now() - (lastPm.get(p.id) ?? 0) < repeatMs) continue;
       if (get("SELECT 1 FROM dc_status WHERE roblox_id = ? AND status = 'confirmed'", p.id)) continue;
 
+      if (nameInGuild(guild, p.name)) continue;
       const discordId = await robloxToDiscord(p.id);
       if (discordId === UNKNOWN) { unknown += 1; continue; }
       if (discordId && (await inGuild(guild, discordId))) continue;
