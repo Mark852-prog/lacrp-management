@@ -240,6 +240,17 @@ CREATE TABLE IF NOT EXISTS dc_status (
   checked_at INTEGER NOT NULL
 );
 
+-- Links made by hand with /manual-verify (for members who can't verify with Bloxlink).
+-- These win over Bloxlink everywhere: Discord checks, in-game role, nicknames.
+CREATE TABLE IF NOT EXISTS manual_links (
+  discord_id  TEXT PRIMARY KEY,
+  roblox_id   INTEGER NOT NULL,
+  roblox_name TEXT,
+  linked_by   TEXT NOT NULL,
+  linked_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_manual_links_roblox ON manual_links(roblox_id);
+
 -- Roblox <-> Discord link cache (Bloxlink).
 CREATE TABLE IF NOT EXISTS roblox_links (
   roblox_id  INTEGER PRIMARY KEY,

@@ -93,6 +93,7 @@ client.once(Events.ClientReady, async (c) => {
   require('./services/inGameRole').attach(c);
   require('./services/webEditor').start(c);
   require('./services/starterEmbeds').ensure();
+  try { require('./lib/manualLinks').restore(); } catch (err) { console.warn('[manual links]', err.message); } // only when data/manual-links-restore.json exists
   // Cleanup first (removes unwanted files), then the import (only when their job files exist).
   require('./services/mediaCleanup').runJob(c).catch((err) => console.error('[media cleanup]', err))
     .finally(() => require('./services/mediaImport').runJob(c).catch((err) => console.error('[media import]', err)));
