@@ -173,8 +173,9 @@ async function handleAnnounce(c, keyword) {
   }
   try {
     await erlc.runCommand(`:${entry.type === 'm' ? 'm' : 'h'} ${entry.message}`);
+    console.log(`[announce] ${c.staff.name} sent "${keyword}"`);
   } catch (err) {
-    console.warn('[announce]', err.message);
+    console.warn(`[announce] "${keyword}" by ${c.staff.name} failed: ${err.message}`);
     await dmStaff(c.staff.id, `❌ Your in-game announcement **${entry.keyword}** couldn't be sent: ${err.message}`);
   }
 }

@@ -22,6 +22,8 @@ const lastPm = new Map(); // roblox id -> ms of the last PM
 const absentUntil = new Map(); // discord id -> ms until we ask Discord again
 let lastRun = 0;
 let busy = false;
+let lastUnknownWarn = 0;
+let announced = false;
 
 async function inGuild(guild, discordId) {
   if (guild.members.cache.has(discordId)) return true;
@@ -38,6 +40,7 @@ async function update(client, server) {
   if (!guild) return;
   busy = true;
   lastRun = Date.now();
+  if (!announced) { announced = true; console.log('[discord check] running: players not in the Discord get an in-game PM (checked every minute)'); }
   try {
     const repeatMs = Math.max(1, Number(cfg.repeatMinutes) || 10) * 60_000;
     const players = (server.Players ?? []).map((p) => erlc.parsePlayer(p.Player)).filter((p) => p.id && p.name);
@@ -47,18 +50,26 @@ async function update(client, server) {
     for (const id of lastPm.keys()) if (!present.has(id)) lastPm.delete(id);
 
     let sent = 0;
+    let unknown = 0;
     for (const p of players) {
       if (sent >= MAX_PMS_PER_RUN) break;
       if (Date.now() - (lastPm.get(p.id) ?? 0) < repeatMs) continue;
       if (get("SELECT 1 FROM dc_status WHERE roblox_id = ? AND status = 'confirmed'", p.id)) continue;
 
       const discordId = await robloxToDiscord(p.id);
-      if (discordId === UNKNOWN) continue;
+      if (discordId === UNKNOWN) { unknown += 1; continue; }
       if (discordId && (await inGuild(guild, discordId))) continue;
 
       lastPm.set(p.id, Date.now());
       sent += 1;
-      await erlc.runCommand(`:pm ${p.name} ${MESSAGE}`).catch((err) => console.warn('[discord check pm]', err.message));
+      await erlc.runCommand(`:pm ${p.name} ${MESSAGE}`)
+        .then(() => console.log(`[discord check] PM sent to ${p.name}`))
+        .catch((err) => console.warn(`[discord check] PM to ${p.name} failed: ${err.message}`));
+    }
+    // Bloxlink couldn't answer (no BLOXLINK_API_KEY, daily limit reached, or an API error): nobody is PM'd for those players.
+    if (unknown && Date.now() - lastUnknownWarn > 10 * 60_000) {
+      lastUnknownWarn = Date.now();
+      console.warn(`[discord check] Bloxlink couldn't be checked for ${unknown} player(s), so they were skipped. Check BLOXLINK_API_KEY in .env and the daily limit.`);
     }
   } finally {
     busy = false;
