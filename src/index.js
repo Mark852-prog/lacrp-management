@@ -30,6 +30,7 @@ const { role } = require('./lib/guildConfig');
 const { SESSION_PINGS_BUTTON_ID } = require('./lib/embeds');
 const poller = require('./services/poller');
 const logReaders = require('./services/logReaders');
+const mentionGuard = require('./services/mentionGuard');
 const nicknames = require('./services/nicknames');
 const panels = require('./services/panels');
 const emojis = require('./lib/emojis');
@@ -88,6 +89,7 @@ client.once(Events.ClientReady, async (c) => {
   for (const p of problems) console.warn(`[permissions] ${p.slot} (#${guild.channels.cache.get(p.channelId)?.name ?? p.channelId}) is missing: ${p.missing.join(', ')}`);
 
   logReaders.attach(c);
+  mentionGuard.attach(c);
   nicknames.attach(c);
   panels.attach(c);
   require('./services/inGameRole').attach(c);

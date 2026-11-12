@@ -4,9 +4,9 @@
 //  - Players staff already confirmed with ":log dc <name> yes" are skipped.
 //    (A "no" keeps the player on the list, so they keep getting the reminder.)
 //  - Players Bloxlink can't answer for right now (no key, daily budget spent, API error) are skipped, never guessed.
-//  - Each player gets the PM when first seen, then a reminder every `repeatMinutes` while they stay in-game.
+//  - Each player gets the PM when first seen, then a reminder every `repeatSeconds` (default 90) while they stay in-game.
 //    When they leave and rejoin they get it again straight away.
-// Optional settings.json block (defaults shown): "discordCheckPm": { "enabled": true, "repeatMinutes": 10 }
+// Optional settings.json block (defaults shown): "discordCheckPm": { "enabled": true, "repeatSeconds": 90 }
 const { get } = require('../lib/db');
 const { config } = require('../lib/config');
 const erlc = require('../lib/erlc');
@@ -14,7 +14,7 @@ const { robloxToDiscord, UNKNOWN } = require('../lib/bloxlink');
 
 const MESSAGE = 'NOTICE You are not in our communitey! Join with code LACRLA to keep playing, or you will be kicked.';
 
-const CHECK_EVERY_MS = 60_000; // how often the player list is checked
+const CHECK_EVERY_MS = 30_000; // how often the player list is checked
 const MAX_PMS_PER_RUN = 8; // keeps the in-game command queue short
 const ABSENT_CACHE_MS = 10 * 60_000; // remember "linked but not in this server" so we don't ask Discord every minute
 
@@ -55,10 +55,10 @@ async function update(client, server) {
   if (!guild) return;
   busy = true;
   lastRun = Date.now();
-  if (!announced) { announced = true; console.log('[discord check] running: players not in the Discord get an in-game PM (checked every minute)'); }
+  if (!announced) { announced = true; console.log('[discord check] running: players not in the Discord get an in-game PM (checked every 30 seconds, reminder about every 90 seconds)'); }
   try {
     await refreshMembers(guild);
-    const repeatMs = Math.max(1, Number(cfg.repeatMinutes) || 10) * 60_000;
+    const repeatMs = Math.max(30, Number(cfg.repeatSeconds) || 90) * 1000;
     const players = (server.Players ?? []).map((p) => erlc.parsePlayer(p.Player)).filter((p) => p.id && p.name);
 
     // Forget players who left, so they're PM'd again when they come back.
