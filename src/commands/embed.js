@@ -7,6 +7,9 @@ const { guard, can } = require('../lib/permissions');
 const { BRAND_COLOR } = require('../lib/embeds');
 const ce = require('../lib/customEmbeds');
 const web = require('../services/webEditor');
+require('../lib/accessLog');
+const { run } = require('../lib/db');
+const { fetchChannel } = require('../lib/guildConfig');
 
 const nameOpt = (o, desc = 'Saved embed') => o.setName('name').setDescription(desc).setRequired(true).setAutocomplete(true);
 
@@ -364,10 +367,29 @@ async function hiddenReply(interaction) {
   const selected = kind === 'm' ? Number(interaction.values?.[0]) : null;
   const item = kind === 'b' ? e.data.buttons[Number(index)] : e.data.menu?.options[selected];
   if (!item) return interaction.reply({ content: 'This option was removed.', flags: MessageFlags.Ephemeral });
+  logAccess(interaction, e, item).catch((err) => console.warn('[access log]', err.message));
   const payload = ce.replyPayload(e.data, item.reply, { id: e.id, guild: interaction.guild, selected });
   // Picking another page from the menu inside a hidden reply swaps that reply in place.
   if (interaction.message?.flags?.has(MessageFlags.Ephemeral)) return interaction.update({ ...payload, attachments: [] });
   return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
+}
+
+// Records who opened a button / menu option and posts it to the access_logs channel (if one is set).
+async function logAccess(interaction, e, item) {
+  const file = item.reply?.file ?? null;
+  const tag = interaction.user.tag ?? interaction.user.username;
+  run('INSERT INTO embed_access(embed_id, embed_name, item, file, user_id, user_tag, channel_id, at) VALUES(?,?,?,?,?,?,?,?)',
+    e.id, e.name, item.label, file, interaction.user.id, tag, interaction.channelId, Math.floor(Date.now() / 1000));
+  console.log(`[access] ${tag} opened "${item.label}" on "${e.name}"`);
+  const channel = await fetchChannel(interaction.client, 'access_logs').catch(() => null);
+  if (!channel) return;
+  await channel.send({
+    embeds: [new EmbedBuilder().setColor(BRAND_COLOR).setTitle('Panel access')
+      .setDescription(`<@${interaction.user.id}> (${tag}) opened **${item.label}**${file ? ` (file: ${file})` : ''}`)
+      .addFields({ name: 'Panel', value: e.name, inline: true }, { name: 'Where', value: `<#${interaction.channelId}>`, inline: true })
+      .setTimestamp()],
+    allowedMentions: { parse: [] },
+  });
 }
 
 async function autocomplete(interaction) {

@@ -21,6 +21,7 @@ const CHANNEL_SLOTS = {
   staff_requests: 'Staff request queue',
   sessions: 'Session announcements (start/end/schedule/poll/vote/alerts)',
   dc_logs: 'DC (Discord check) log',
+  access_logs: 'Access log - who opens handbooks / panel buttons',
   vex_shift_logs: 'Vex shift logs (read-only - where Vex posts Shift Ended)',
   infractions: 'Utility Bot infractions (read-only)',
   promotions: 'Utility Bot promotions (read-only)',

@@ -2,7 +2,7 @@
 const { PermissionFlagsBits: P, ChannelType } = require('discord.js');
 const { CHANNEL_SLOTS, channel: channelId } = require('./guildConfig');
 
-const POST = ['staff_requests', 'sessions', 'dc_logs'];
+const POST = ['staff_requests', 'sessions', 'dc_logs', 'access_logs'];
 const NEEDS = {
   post: [P.ViewChannel, P.SendMessages, P.EmbedLinks, P.AttachFiles, P.ReadMessageHistory],
   read: [P.ViewChannel, P.ReadMessageHistory],
