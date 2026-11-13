@@ -3,13 +3,14 @@ const {
   SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags, EmbedBuilder, ActionRowBuilder,
   ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, ChannelSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle,
 } = require('discord.js');
+const fs = require('node:fs');
+const path = require('node:path');
 const { guard, can } = require('../lib/permissions');
 const { BRAND_COLOR } = require('../lib/embeds');
 const ce = require('../lib/customEmbeds');
 const web = require('../services/webEditor');
 require('../lib/accessLog');
 const { run } = require('../lib/db');
-const { fetchChannel } = require('../lib/guildConfig');
 
 const nameOpt = (o, desc = 'Saved embed') => o.setName('name').setDescription(desc).setRequired(true).setAutocomplete(true);
 
@@ -374,22 +375,16 @@ async function hiddenReply(interaction) {
   return interaction.reply({ ...payload, flags: MessageFlags.Ephemeral });
 }
 
-// Records who opened a button / menu option and posts it to the access_logs channel (if one is set).
+// Records who opened a button / menu option. Private: only written to data/access-log.txt (download it
+// from the hosting panel's File Manager) and the database. Nothing is posted in Discord.
 async function logAccess(interaction, e, item) {
   const file = item.reply?.file ?? null;
   const tag = interaction.user.tag ?? interaction.user.username;
   run('INSERT INTO embed_access(embed_id, embed_name, item, file, user_id, user_tag, channel_id, at) VALUES(?,?,?,?,?,?,?,?)',
     e.id, e.name, item.label, file, interaction.user.id, tag, interaction.channelId, Math.floor(Date.now() / 1000));
-  console.log(`[access] ${tag} opened "${item.label}" on "${e.name}"`);
-  const channel = await fetchChannel(interaction.client, 'access_logs').catch(() => null);
-  if (!channel) return;
-  await channel.send({
-    embeds: [new EmbedBuilder().setColor(BRAND_COLOR).setTitle('Panel access')
-      .setDescription(`<@${interaction.user.id}> (${tag}) opened **${item.label}**${file ? ` (file: ${file})` : ''}`)
-      .addFields({ name: 'Panel', value: e.name, inline: true }, { name: 'Where', value: `<#${interaction.channelId}>`, inline: true })
-      .setTimestamp()],
-    allowedMentions: { parse: [] },
-  });
+  const stamp = new Date().toISOString().replace('T', ' ').slice(0, 19);
+  fs.appendFileSync(path.join(__dirname, '..', '..', 'data', 'access-log.txt'),
+    `${stamp} UTC | ${tag} (${interaction.user.id}) | ${item.label} | panel: ${e.name}${file ? ` | file: ${file}` : ''}\n`);
 }
 
 async function autocomplete(interaction) {
